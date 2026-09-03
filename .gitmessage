@@ -1,0 +1,14 @@
+# type(optional-scope): imperative summary
+#
+# Why:
+#
+# What:
+#
+# Verification:
+#
+# Conventional Commit types:
+# feat, fix, docs, refactor, test, perf, build, ci, chore, revert
+#
+# Keep the subject imperative, lowercase after the colon, and under 72
+# characters when practical. Add `!` and a `BREAKING CHANGE:` footer for a
+# breaking public-interface change. Update CHANGELOG.md for user-visible work.

@@ -1,0 +1,49 @@
+# Operating-system and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+credentials.json
+token.json
+tokens.json
+
+# Go build, test, and profiling output
+/bin/
+/dist/
+*.exe
+*.test
+*.out
+*.prof
+coverage.*
+/vendor/
+go.work
+go.work.sum
+
+# Python tooling used by research and documentation scripts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+
+# kcli runtime state and downloads
+.kcli/
+kcli-downloads/
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
+
+# Local scratch and cache directories
+.cache/
+.tmp/
+tmp/
