@@ -61,6 +61,10 @@ func Open(ctx context.Context, path string) (*DB, error) {
 		sqldb.Close()
 		return nil, err
 	}
+	if err := db.RecoverStaleExecuting(ctx, time.Now().UTC()); err != nil {
+		sqldb.Close()
+		return nil, err
+	}
 	return db, nil
 }
 

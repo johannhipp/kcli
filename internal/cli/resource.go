@@ -364,7 +364,6 @@ func (c *DMReplyCmd) Validate() error {
 	}
 	return validateMutationInput(c.Message, c.MessageFile, c.Input, c.DryRun, c.Confirm)
 }
-func (*DMReplyCmd) Run(*Runtime) error { return domain.NotImplemented("dm reply") }
 func (*DMReplyCmd) Describe() app.OperationMeta {
 	return operation("Preview or single-claim-confirm one external text reply.", domain.DMReplyInputV1{}, domain.DMOutputV1{}, "kcli.dm-reply/v1", true, app.SideEffectExternalMessage, true, app.EvidenceSource, 0, 0, []string{"kcli dm reply 123 --message-file note.txt --dry-run"}, []string{"V01-DM-04", "V01-DM-08"})
 }
@@ -387,7 +386,6 @@ func (c *DMStartCmd) Validate() error {
 	}
 	return validateMutationInput(c.Message, c.MessageFile, c.Input, c.DryRun, c.Confirm)
 }
-func (*DMStartCmd) Run(*Runtime) error { return domain.NotImplemented("dm start") }
 func (*DMStartCmd) Describe() app.OperationMeta {
 	return operation("Preview or single-claim-confirm one first-contact message.", domain.DMStartInputV1{}, domain.DMOutputV1{}, "kcli.dm-start/v1", true, app.SideEffectExternalMessage, true, app.EvidenceSource, 0, 0, []string{"kcli dm start 123 --message-file note.txt --dry-run"}, []string{"V01-DM-05", "V01-DM-08"})
 }

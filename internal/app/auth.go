@@ -206,7 +206,14 @@ func (a *App) AuthDo(ctx context.Context, profile, requestID string, request kle
 	request.Context = ctx
 	response, err := kleinanzeigen.AuthenticatedTransport(a.Transport, session.AccessToken, session.Email).Do(request)
 	if err != nil {
-		return kleinanzeigen.Response{}, kleinanzeigen.AuthRequestError(err)
+		authErr := kleinanzeigen.AuthRequestError(err)
+		if typed, ok := authErr.(*domain.Error); ok && kleinanzeigen.IsTransportPreWrite(err) {
+			if typed.Details == nil {
+				typed.Details = map[string]any{}
+			}
+			typed.Details["pre_write"] = true
+		}
+		return kleinanzeigen.Response{}, authErr
 	}
 	if response.StatusCode == http.StatusForbidden {
 		return kleinanzeigen.Response{}, &domain.Error{Code: domain.CodeAuthRevoked, Message: "authenticated request was forbidden"}
@@ -216,6 +223,12 @@ func (a *App) AuthDo(ctx context.Context, profile, requestID string, request kle
 			return kleinanzeigen.Response{}, kleinanzeigen.AuthResponseError(response)
 		}
 		return response, nil
+	}
+	// External create/send must never be retried: a 401 is surfaced for
+	// reconciliation/login and the request is not repeated after a refresh.
+	if request.Class == kleinanzeigen.ExternalCreate || request.Class == kleinanzeigen.ExternalSend {
+		authInvalidateSession(a, ctx, profile)
+		return kleinanzeigen.Response{}, &domain.Error{Code: domain.CodeAuthExpired, Message: "authenticated session is required to send; no retry was attempted"}
 	}
 	session, err = authUsableSession(a, ctx, profile, requestID, session.AccessToken, true)
 	if err != nil {
