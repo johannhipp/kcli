@@ -2,6 +2,8 @@ module github.com/johannhipp/kcli
 
 go 1.26.0
 
+toolchain go1.26.6
+
 require (
 	github.com/alecthomas/kong v1.16.1
 	github.com/google/go-cmp v0.7.0

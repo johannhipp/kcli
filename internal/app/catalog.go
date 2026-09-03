@@ -51,7 +51,7 @@ type Catalog struct{ operations []OperationMeta }
 
 func BuildCatalog(model *kong.Application) (*Catalog, error) {
 	if model == nil || model.Node == nil {
-		return nil, fmt.Errorf("Kong model is required")
+		return nil, fmt.Errorf("kong model is required")
 	}
 	var operations []OperationMeta
 	var walk func(*kong.Node) error

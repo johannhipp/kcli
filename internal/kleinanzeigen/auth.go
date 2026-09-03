@@ -24,7 +24,7 @@ const (
 	AuthIssuer      = "https://login.kleinanzeigen.de/"
 )
 
-var AuthErrInvalidGrant = errors.New("OAuth refresh grant is invalid")
+var ErrInvalidGrant = errors.New("OAuth refresh grant is invalid")
 
 type AuthConfiguration struct {
 	ClientID string
@@ -181,7 +181,7 @@ func authTokenRequest(ctx context.Context, transport Transport, payload any, req
 		}
 		_ = json.Unmarshal(response.Body, &oauthError)
 		if oauthError.Error == "invalid_grant" {
-			return AuthToken{}, &domain.Error{Code: domain.CodeAuthExpired, Message: "login is required", Cause: AuthErrInvalidGrant}
+			return AuthToken{}, &domain.Error{Code: domain.CodeAuthExpired, Message: "login is required", Cause: ErrInvalidGrant}
 		}
 		if oauthError.Error != "" {
 			details := map[string]any{"status": response.StatusCode}

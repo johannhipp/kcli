@@ -30,6 +30,9 @@
   commit format, pull-request expectations, and versioning.
 - [Security policy](../SECURITY.md) — private reporting and the project's
   credential, automation, and message-safety boundaries.
+- [kcli agent skill](../.agents/skills/kcli/SKILL.md) — actionable guardrails
+  (dry runs, field masks, confirmation bindings, cursors, fail-closed exits)
+  for driving kcli from an agent.
 
 The endpoint reference is based on
 [`monkrel/kleinanzeigen-api` v0.4.0](https://github.com/monkrel/kleinanzeigen-api/tree/efb2d82bf449c38a49558b8c71df8d888effbfd9),

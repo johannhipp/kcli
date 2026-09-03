@@ -5,8 +5,11 @@ Kleinanzeigen: search, listing and image inspection, best-effort seller lookup,
 and explicitly confirmed direct messaging after login.
 
 > [!IMPORTANT]
-> kcli is in planning and research. There is no implementation or release yet.
-> It is unofficial and not endorsed by Kleinanzeigen.
+> kcli is under active implementation: the Go binary builds and its command,
+> state, and transport logic are tested against redacted fixtures and fake
+> servers. Automated live testing and release remain blocked until written
+> Kleinanzeigen permission covers the intended use. It is unofficial and not
+> endorsed by Kleinanzeigen.
 
 ## Planned `0.1.0`
 
@@ -33,8 +36,18 @@ ordinary text exchanged by users in chat.
 | [Documentation index](docs/README.md) | All product, API, synchronization, and research documents |
 | [Contributing](CONTRIBUTING.md) | Repository workflow and required checks |
 
-The repository is documentation-first until the implementation feasibility
-gates pass. Validate documentation locally with:
+The repository is documentation-led: every contract is specified before code,
+and the release gate requires live evidence (permission + two authorized test
+accounts) that is external to the repository.
+
+Build and test the Go implementation:
+
+```bash
+go build ./...
+go test -tags testing -race ./...
+```
+
+Validate documentation contracts locally with:
 
 ```bash
 python3 scripts/check_docs.py

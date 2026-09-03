@@ -373,7 +373,7 @@ func authUsableSession(a *App, ctx context.Context, profile, requestID, rejected
 		}
 		refreshed, err := kleinanzeigen.AuthRefresh(ctx, a.Transport, config, current.RefreshToken)
 		if err != nil {
-			if errors.Is(err, kleinanzeigen.AuthErrInvalidGrant) {
+			if errors.Is(err, kleinanzeigen.ErrInvalidGrant) {
 				authInvalidateSession(a, ctx, profile)
 			}
 			return authSession{}, err

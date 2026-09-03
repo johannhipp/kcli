@@ -1,8 +1,9 @@
 # Contributing to kcli
 
-kcli is currently documentation-first: the release boundary and implementation
-plan are being stabilized before production code begins. Contributions should
-make the documented contract more precise without silently expanding v0.1.
+kcli is documentation-led: public contracts are stabilized before behavior
+changes, and the release boundary is enforced by the v0.1 scope. Go
+implementation is active; contributions should keep the documented contract and
+the code in agreement without silently expanding v0.1.
 
 ## Before making a change
 
@@ -23,9 +24,17 @@ contract documents in the same commit. Before opening a pull request, run:
 python3 scripts/check_docs.py
 ```
 
-Once Go implementation begins, also run the smallest relevant unit or smoke
-tests plus the repository checks documented in
-[the implementation plan](docs/implementation-plan.md).
+For Go changes, also run the relevant unit/smoke tests and the repository
+checks documented in
+[the implementation plan](docs/implementation-plan.md), at minimum:
+
+```bash
+gofmt -l .            # must be empty
+go mod verify
+go build ./...
+go vet ./...
+go test -tags testing -race ./...
+```
 
 ## Commits
 

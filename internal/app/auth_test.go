@@ -287,7 +287,7 @@ func TestAuthInvalidGrantClearsUsableSession(t *testing.T) {
 	application, store, database := authTestApp(t, server, now)
 	authSeedSession(t, store, database, "access-old", "refresh-old", now.Add(30*time.Second))
 	_, err := application.AuthStatus(context.Background(), "default", "request-4", domain.AuthStatusInputV1{Check: true})
-	if !errors.Is(err, kleinanzeigen.AuthErrInvalidGrant) {
+	if !errors.Is(err, kleinanzeigen.ErrInvalidGrant) {
 		t.Fatalf("error = %v", err)
 	}
 	for _, name := range authSecretNames() {

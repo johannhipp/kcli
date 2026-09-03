@@ -16,13 +16,6 @@ import (
 	"github.com/johannhipp/kcli/internal/domain"
 )
 
-type authTestConfiguredTransport struct {
-	Transport
-	config AuthConfiguration
-}
-
-func (t authTestConfiguredTransport) AuthConfiguration() AuthConfiguration { return t.config }
-
 func TestAuthAuthorizationAndCodeExchange(t *testing.T) {
 	var requests atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -169,7 +162,7 @@ func TestAuthRefreshInvalidGrantAndProfileResolution(t *testing.T) {
 	defer server.Close()
 	transport := authTestHTTPTransport(t, server)
 	_, err := AuthRefresh(context.Background(), transport, AuthConfiguration{ClientID: "mobile-client", Issuer: "https://issuer.invalid/"}, "refresh-value")
-	if !errors.Is(err, AuthErrInvalidGrant) || tokenRequests.Load() != 1 {
+	if !errors.Is(err, ErrInvalidGrant) || tokenRequests.Load() != 1 {
 		t.Fatalf("refresh error = %v, requests = %d", err, tokenRequests.Load())
 	}
 	id, err := AuthResolveProfileID(context.Background(), transport, "access-value", "person@example.invalid")
