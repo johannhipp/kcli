@@ -316,7 +316,6 @@ func (c *DMPollCmd) Validate() error {
 	}
 	return nil
 }
-func (*DMPollCmd) Run(*Runtime) error { return domain.NotImplemented("dm poll") }
 func (*DMPollCmd) Describe() app.OperationMeta {
 	return operation("Run one restart-safe incremental DM synchronization cycle.", domain.DMPollInputV1{}, domain.SyncOutputV1{}, "kcli.dm-events/v1", true, app.SideEffectAccountState, false, app.EvidenceProvisional, 200, 500, []string{"kcli dm poll --since now"}, []string{"V01-DM-09"})
 }
@@ -342,7 +341,6 @@ func (c *DMWatchCmd) Validate() error {
 	}
 	return nil
 }
-func (*DMWatchCmd) Run(*Runtime) error { return domain.NotImplemented("dm watch") }
 func (*DMWatchCmd) Describe() app.OperationMeta {
 	return operation("Watch DM changes as NDJSON synthesized from conservative polling.", domain.DMWatchInputV1{}, domain.EventV1{}, "kcli.event/v1", true, app.SideEffectAccountState, false, app.EvidenceProvisional, 200, 500, []string{"kcli dm watch --since now"}, []string{"V01-DM-10"})
 }
