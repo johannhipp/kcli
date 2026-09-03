@@ -38,6 +38,7 @@ The first planned release is `0.1.0`. There are no tagged releases yet.
   settings, a Conventional Commit template, contribution and security policies,
   a pull-request checklist, and documentation-contract CI.
 - Functional `category`, `location`, and `filter` discovery commands backed by the bounded mobile transport, with raw evidence fields and fail-closed behavior when distribution credentials are absent.
+- Added search, listing, seller, and authentication command families over the bounded mobile transport and the profile-local state, with strictly validated identifiers, fail-closed access when credentials are absent, and no live-network experiments.
 
 ### Changed
 

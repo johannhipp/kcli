@@ -12,11 +12,13 @@ import (
 
 	"github.com/alecthomas/kong"
 	"github.com/johannhipp/kcli/internal/app"
+	"github.com/johannhipp/kcli/internal/buildinfo"
 	"github.com/johannhipp/kcli/internal/domain"
 	"github.com/johannhipp/kcli/internal/kleinanzeigen"
 	"github.com/johannhipp/kcli/internal/output"
 	"github.com/johannhipp/kcli/internal/platform"
 	schemacatalog "github.com/johannhipp/kcli/internal/schema"
+	"github.com/johannhipp/kcli/internal/secret"
 	"github.com/johannhipp/kcli/internal/state"
 	kongcompletion "github.com/jotaen/kong-completion"
 )
@@ -95,6 +97,7 @@ type ConfigCmd struct {
 
 type Runtime struct {
 	Context   context.Context
+	Stdin     io.Reader
 	Stdout    io.Writer
 	Stderr    io.Writer
 	RequestID string
@@ -142,7 +145,7 @@ func Execute(ctx context.Context, args []string, stdin io.Reader, stdout, stderr
 		_, _ = fmt.Fprintln(stderr, err)
 		return 1
 	}
-	runtime := &Runtime{Context: ctx, Stdout: stdout, Stderr: stderr, RequestID: output.NewRequestID(), Catalog: schemacatalog.New(catalog, nil), Core: app.New(app.Dependencies{}), Encoder: output.Encoder{Format: defaultFormat(stdout)}}
+	runtime := &Runtime{Context: ctx, Stdin: stdin, Stdout: stdout, Stderr: stderr, RequestID: output.NewRequestID(), Catalog: schemacatalog.New(catalog, nil), Core: app.New(app.Dependencies{}), Encoder: output.Encoder{Format: defaultFormat(stdout)}}
 	parsed, err := parser.Parse(args)
 	if err != nil {
 		return fail(runtime, invalidError(err), true)
@@ -189,9 +192,19 @@ func Execute(ctx context.Context, args []string, stdin io.Reader, stdout, stderr
 		if err != nil {
 			return fail(runtime, &domain.Error{Code: domain.CodeUnavailable, Message: "load mobile install identity", Cause: err}, false)
 		}
-		credentials := kleinanzeigen.MobileCredentials{BasicUser: os.Getenv("KLEINANZEIGEN_BASIC_USER"), BasicPassword: os.Getenv("KLEINANZEIGEN_BASIC_PW")}
+		credentials := kleinanzeigen.MobileCredentials{
+			BasicUser:     os.Getenv("KLEINANZEIGEN_BASIC_USER"),
+			BasicPassword: os.Getenv("KLEINANZEIGEN_BASIC_PW"),
+			OAuthClientID: buildinfo.OAuthClientID,
+		}
 		mobile := kleinanzeigen.NewMobileTransport(kleinanzeigen.NewHTTPTransport(), installID, credentials, database)
-		runtime.Core = app.New(app.Dependencies{Transport: mobile, State: database})
+		deps := app.Dependencies{Transport: mobile, State: database}
+		if strings.HasPrefix(selected, "auth ") {
+			if store, err := secret.New("kcli"); err == nil {
+				deps.Secrets = store
+			}
+		}
+		runtime.Core = app.New(deps)
 	}
 	if root.Output != "" {
 		format, err := output.ParseFormat(root.Output)
@@ -235,7 +248,13 @@ func selectedPath(node *kong.Node) string {
 }
 
 func requiresRemoteState(path string) bool {
-	return strings.HasPrefix(path, "category ") || strings.HasPrefix(path, "location ") || strings.HasPrefix(path, "filter ")
+	return strings.HasPrefix(path, "category ") ||
+		strings.HasPrefix(path, "location ") ||
+		strings.HasPrefix(path, "filter ") ||
+		strings.HasPrefix(path, "search ") ||
+		strings.HasPrefix(path, "listing ") ||
+		strings.HasPrefix(path, "seller ") ||
+		strings.HasPrefix(path, "auth ")
 }
 func defaultFormat(stdout io.Writer) output.Format {
 	if output.IsTTY(stdout) {

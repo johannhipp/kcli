@@ -1,0 +1,68 @@
+{
+  "{http://www.ebayclassifiedsgroup.com/schema/ad/v1}ad": {
+    "value": {
+      "id": "1234567890",
+      "title": "Vintage &amp; sichere Lampe",
+      "description": "Redacted fixture description &amp; condition notes.",
+      "category": {"id": "246", "localized-name": "Lampen", "parent-name": "Haus"},
+      "price": {"amount": "19.95", "price-type": "FIXED"},
+      "ad-type": "OFFERED",
+      "poster-type": "PRIVATE",
+      "status": "ACTIVE",
+      "labels": ["pickup"],
+      "start-date-time": "2026-08-31T10:00:00Z",
+      "end-date-time": "2026-09-30T10:00:00Z",
+      "view-count": 42,
+      "contract-warnings": ["redacted-example"],
+      "ad-address": {
+        "state": "Berlin",
+        "zip-code": "10115",
+        "latitude": "52.52",
+        "longitude": "13.40"
+      },
+      "distance": "3.2",
+      "pickup": true,
+      "shipping": {"available": true, "cost": "4.50"},
+      "attributes": {
+        "attribute": [
+          {"name": "condition", "localized-label": "Zustand", "value": ["GOOD"]},
+          {"name": "future-attribute", "localized-label": "Future", "value": ["kept"], "unknown-attribute-field": "preserved"}
+        ]
+      },
+      "pictures": {
+        "picture": [
+          {
+            "width": 1600,
+            "height": 1200,
+            "size": "original",
+            "link": [
+              {"rel": "XXL", "href": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/aa/aa.jpg"},
+              {"rel": "large", "href": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/aa/aa-large.jpg"}
+            ]
+          },
+          {
+            "width": 640,
+            "height": 480,
+            "link": {"rel": "teaser", "href": "https://img.kleinanzeigen.de/api/v1/prod-ads/images/bb/bb.jpg"}
+          }
+        ]
+      },
+      "contact-name": "Händler Änne",
+      "contact-name-initials": "HÄ",
+      "user-id": "987654321",
+      "seller-account-type": "COMMERCIAL",
+      "user-since-date-time": "2019-01-02T00:00:00Z",
+      "user-rating": {"score": "4.9", "count": 88},
+      "userBadges": ["VERIFIED", "RESPONSIVE"],
+      "company-name": "Beispiel Licht GmbH",
+      "company-details": {"legal-form": "GmbH"},
+      "email": "fixture.user@example.invalid",
+      "access_token": "fixture-token-must-not-appear",
+      "link": [
+        {"rel": "self-public-website", "href": "https://www.kleinanzeigen.de/s-anzeige/vintage-lampe/1234567890-82-1234"},
+        {"rel": "self-user", "href": "https://api.kleinanzeigen.de/api/users/987654321"}
+      ],
+      "unknown-top-level-field": {"kept": true}
+    }
+  }
+}

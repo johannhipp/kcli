@@ -47,5 +47,5 @@ stdout '"name": "network"'
 
 ! exec kcli search x
 stdout '"schema": "kcli.error/v1"'
-stdout '"code": "not_implemented"'
-stderr '^search arrives in a later phase$'
+stdout '"code": "unavailable"'
+stderr '^search state is unavailable$'

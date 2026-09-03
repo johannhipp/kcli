@@ -67,7 +67,6 @@ func (c *SearchCmd) Validate() error {
 	}
 	return nil
 }
-func (c *SearchCmd) Run(*Runtime) error { return domain.NotImplemented("search") }
 func (c *SearchCmd) Describe() app.OperationMeta {
 	return operation("Search listings with a reproducible bounded specification.", domain.SearchInputV1{}, domain.SearchOutputV1{}, "kcli.search-results/v1", false, app.SideEffectNone, false, app.EvidenceLive, 25, 1000, []string{"kcli search thinkpad --limit 25"}, []string{"V01-SEARCH-01", "V01-SEARCH-03", "V01-SEARCH-04", "V01-SEARCH-05", "V01-SEARCH-06", "V01-SEARCH-07", "V01-SEARCH-08", "V01-SEARCH-09", "V01-SEARCH-10"})
 }
@@ -144,8 +143,7 @@ type ListingGetCmd struct {
 	Raw     bool
 }
 
-func (c *ListingGetCmd) Validate() error  { return validateListingReference(c.IDOrURL) }
-func (*ListingGetCmd) Run(*Runtime) error { return domain.NotImplemented("listing get") }
+func (c *ListingGetCmd) Validate() error { return validateListingReference(c.IDOrURL) }
 func (*ListingGetCmd) Describe() app.OperationMeta {
 	return operation("Get normalized listing details with optional redacted raw data.", domain.ListingGetInputV1{}, domain.ListingOutputV1{}, "kcli.listing/v1", false, app.SideEffectNone, false, app.EvidenceLive, 0, 0, []string{"kcli listing get 1234567890"}, []string{"V01-LISTING-01", "V01-LISTING-02", "V01-LISTING-05", "V01-LISTING-06", "V01-LISTING-07"})
 }
@@ -168,7 +166,6 @@ func (c *ListingImagesCmd) Validate() error {
 	}
 	return nil
 }
-func (*ListingImagesCmd) Run(*Runtime) error { return domain.NotImplemented("listing images") }
 func (*ListingImagesCmd) Describe() app.OperationMeta {
 	return operation("List image variants or safely download selected variants.", domain.ListingImagesInputV1{}, domain.ListingImagesOutputV1{}, "kcli.listing-images/v1", false, app.SideEffectLocal, false, app.EvidenceLive, 0, 0, []string{"kcli listing images 1234567890"}, []string{"V01-LISTING-03", "V01-LISTING-04"})
 }
@@ -177,8 +174,7 @@ type ListingOpenCmd struct {
 	IDOrURL string `arg:"" name:"id-or-url"`
 }
 
-func (c *ListingOpenCmd) Validate() error  { return validateListingReference(c.IDOrURL) }
-func (*ListingOpenCmd) Run(*Runtime) error { return domain.NotImplemented("listing open") }
+func (c *ListingOpenCmd) Validate() error { return validateListingReference(c.IDOrURL) }
 func (*ListingOpenCmd) Describe() app.OperationMeta {
 	return operation("Open only the normalized official public listing URL.", domain.ListingOpenInputV1{}, domain.ListingOpenOutputV1{}, "kcli.listing-open/v1", false, app.SideEffectLocal, false, app.EvidenceLive, 0, 0, []string{"kcli listing open 1234567890"}, []string{"V01-LISTING-08"})
 }
@@ -195,9 +191,8 @@ func (c *SellerGetCmd) Validate() error {
 	if c.Listing != "" {
 		return validateListingReference(c.Listing)
 	}
-	return validateReference(c.IDOrURL, false)
+	return validateSellerReference(c.IDOrURL)
 }
-func (*SellerGetCmd) Run(*Runtime) error { return domain.NotImplemented("seller get") }
 func (*SellerGetCmd) Describe() app.OperationMeta {
 	return operation("Get a seller from a known reference or listing.", domain.SellerGetInputV1{}, domain.SellerOutputV1{}, "kcli.seller/v1", false, app.SideEffectNone, false, app.EvidenceProvisional, 0, 0, []string{"kcli seller get --listing 1234567890"}, []string{"V01-USER-01", "V01-USER-02", "V01-USER-04", "V01-USER-05"})
 }
@@ -207,8 +202,7 @@ type SellerSearchCmd struct {
 	Match string `enum:"exact,contains" default:"contains"`
 }
 
-func (c *SellerSearchCmd) Validate() error  { return validateText(c.Name, 256, "seller name") }
-func (*SellerSearchCmd) Run(*Runtime) error { return domain.NotImplemented("seller search") }
+func (c *SellerSearchCmd) Validate() error { return validateText(c.Name, 256, "seller name") }
 func (*SellerSearchCmd) Describe() app.OperationMeta {
 	return operation("Search the bounded local seller index by name.", domain.SellerSearchInputV1{}, domain.SellerListOutputV1{}, "kcli.sellers/v1", false, app.SideEffectNone, false, app.EvidenceLocal, 25, 100, []string{"kcli seller search Example"}, []string{"V01-USER-03", "V01-USER-05"})
 }
@@ -219,7 +213,7 @@ type SellerListingsCmd struct {
 }
 
 func (c *SellerListingsCmd) Validate() error {
-	if err := validateReference(c.IDOrURL, false); err != nil {
+	if err := validateSellerReference(c.IDOrURL); err != nil {
 		return err
 	}
 	if c.Limit < 1 || c.Limit > 1000 {
@@ -227,7 +221,6 @@ func (c *SellerListingsCmd) Validate() error {
 	}
 	return nil
 }
-func (*SellerListingsCmd) Run(*Runtime) error { return domain.NotImplemented("seller listings") }
 func (*SellerListingsCmd) Describe() app.OperationMeta {
 	return operation("List only locally known listings for a seller.", domain.SellerListingsInputV1{}, domain.SellerListingsOutputV1{}, "kcli.seller-listings/v1", false, app.SideEffectNone, false, app.EvidenceLocal, 25, 1000, []string{"kcli seller listings 123"}, []string{"V01-USER-04", "V01-USER-05"})
 }
@@ -237,14 +230,12 @@ type AuthLoginCmd struct {
 	RedirectFile string `name:"redirect-file" type:"path"`
 }
 
-func (*AuthLoginCmd) Run(*Runtime) error { return domain.NotImplemented("auth login") }
 func (*AuthLoginCmd) Describe() app.OperationMeta {
 	return operation("Log in through interactive Auth0 PKCE without accepting a password.", domain.AuthLoginInputV1{}, domain.AuthOutputV1{}, "kcli.auth/v1", false, app.SideEffectLocal, false, app.EvidenceSource, 0, 0, []string{"kcli auth login --no-open --redirect-file -"}, []string{"V01-DM-01"})
 }
 
 type AuthStatusCmd struct{ Check bool }
 
-func (*AuthStatusCmd) Run(*Runtime) error { return domain.NotImplemented("auth status") }
 func (*AuthStatusCmd) Describe() app.OperationMeta {
 	return operation("Show local session status with an optional remote check.", domain.AuthStatusInputV1{}, domain.AuthOutputV1{}, "kcli.auth/v1", false, app.SideEffectNone, false, app.EvidenceSource, 0, 0, []string{"kcli auth status"}, []string{"V01-DM-01"})
 }
@@ -253,7 +244,6 @@ type AuthLogoutCmd struct {
 	DryRun bool `name:"dry-run"`
 }
 
-func (*AuthLogoutCmd) Run(*Runtime) error { return domain.NotImplemented("auth logout") }
 func (*AuthLogoutCmd) Describe() app.OperationMeta {
 	return operation("Preview or clear only the local authenticated session.", domain.AuthLogoutInputV1{}, domain.AuthOutputV1{}, "kcli.auth/v1", false, app.SideEffectLocal, false, app.EvidenceSource, 0, 0, []string{"kcli auth logout --dry-run"}, []string{"V01-DM-01"})
 }
@@ -438,6 +428,16 @@ func validateListingReference(value string) error {
 	parsed, err := url.Parse(value)
 	if err != nil || parsed.Scheme != "https" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" || (parsed.Hostname() != "www.kleinanzeigen.de" && parsed.Hostname() != "kleinanzeigen.de") || !listingPath.MatchString(parsed.Path) {
 		return fmt.Errorf("invalid listing URL")
+	}
+	return nil
+}
+func validateSellerReference(value string) error {
+	if !strings.Contains(value, "://") {
+		return validateReference(value, false)
+	}
+	parsed, err := url.Parse(value)
+	if err != nil || parsed.Scheme != "https" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" || (parsed.Hostname() != "www.kleinanzeigen.de" && parsed.Hostname() != "kleinanzeigen.de") || parsed.Path == "" || strings.Contains(value, "..") {
+		return fmt.Errorf("invalid seller reference")
 	}
 	return nil
 }

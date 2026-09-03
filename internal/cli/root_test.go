@@ -66,10 +66,10 @@ func TestStdioSeparationAndResourceExit(t *testing.T) {
 	setPathEnvironment(t)
 	var stdout, stderr bytes.Buffer
 	code := Execute(context.Background(), []string{"search", "x"}, bytes.NewReader(nil), &stdout, &stderr)
-	if code != 1 {
-		t.Fatalf("exit = %d, want 1", code)
+	if code != 4 {
+		t.Fatalf("exit = %d, want 4", code)
 	}
-	if !bytes.Contains(stderr.Bytes(), []byte("search arrives in a later phase")) {
+	if !bytes.Contains(stderr.Bytes(), []byte("search state is unavailable")) {
 		t.Fatalf("missing diagnostic: %q", stderr.String())
 	}
 	decoder := json.NewDecoder(&stdout)
@@ -77,7 +77,7 @@ func TestStdioSeparationAndResourceExit(t *testing.T) {
 	if err := decoder.Decode(&value); err != nil {
 		t.Fatalf("stdout is not JSON: %v: %q", err, stdout.String())
 	}
-	if value["schema"] != "kcli.error/v1" || value["code"] != "not_implemented" {
+	if value["schema"] != "kcli.error/v1" || value["code"] != "unavailable" {
 		t.Fatalf("unexpected error envelope: %#v", value)
 	}
 	if err := decoder.Decode(&value); err != io.EOF {

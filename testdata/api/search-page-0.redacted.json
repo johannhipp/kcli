@@ -1,0 +1,34 @@
+{
+  "http://www.ebayclassifiedsgroup.com/schema/ad/v1": {
+    "ads": {
+      "value": {
+        "paging": {"numFound": {"value": "4"}},
+        "ad": [
+          {
+            "id": {"value": "100000000001"},
+            "title": {"value": "ThinkPad &amp; dock"},
+            "description": {"value": "A clean work laptop"},
+            "price": {"amount": {"value": "120.50"}, "price-type": {"value": "FIXED"}},
+            "status": {"value": "available"},
+            "contact-name": {"value": "Seller One"},
+            "user-id": {"value": "200000000001"},
+            "poster-type": {"value": "PRIVATE"},
+            "link": [
+              {"rel": {"value": "self-public-website"}, "href": {"value": "https://www.kleinanzeigen.de/s-anzeige/redacted/100000000001"}},
+              {"rel": {"value": "self-user"}, "href": {"value": "https://www.kleinanzeigen.de/s-bestandsliste.html?userId=200000000001"}}
+            ]
+          },
+          {
+            "id": {"value": "100000000002"},
+            "title": {"value": "Damaged ThinkPad"},
+            "description": {"value": "Display broken"},
+            "price": {"amount": {"value": "75"}},
+            "contact-name": {"value": "Seller Two"},
+            "user-id": {"value": "200000000002"},
+            "link": {"rel": {"value": "self-public-website"}, "href": {"value": "https://www.kleinanzeigen.de/s-anzeige/redacted/100000000002"}}
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "ads": {
+    "value": {
+      "paging": {"numFound": {"value": "4"}},
+      "ad": [
+        {
+          "id": {"value": "100000000001"},
+          "title": {"value": "ThinkPad &amp; dock"},
+          "description": {"value": "duplicate"},
+          "contact-name": {"value": "Seller One"},
+          "user-id": {"value": "200000000001"},
+          "link": {"rel": {"value": "self-public-website"}, "href": {"value": "https://www.kleinanzeigen.de/s-anzeige/redacted/100000000001"}}
+        },
+        {
+          "id": {"value": "100000000003"},
+          "title": {"value": "ThinkPad X series"},
+          "description": {"value": "Portable laptop"},
+          "price": {"amount": {"value": "99.99"}},
+          "contact-name": {"value": "Seller Three"},
+          "user-id": {"value": "200000000003"},
+          "link": {"rel": {"value": "self-public-website"}, "href": {"value": "https://www.kleinanzeigen.de/s-anzeige/redacted/100000000003"}}
+        }
+      ]
+    }
+  }
+}
