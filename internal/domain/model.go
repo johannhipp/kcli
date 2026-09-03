@@ -49,21 +49,32 @@ type ListingSummaryV1 struct {
 	URL        string `json:"url"`
 }
 type CategoryV1 struct {
-	ID       string `json:"id"`
-	Path     string `json:"path"`
-	Label    string `json:"label"`
-	ParentID string `json:"parent_id,omitempty"`
+	ID       string          `json:"id"`
+	Path     string          `json:"path"`
+	Label    string          `json:"label"`
+	ParentID string          `json:"parent_id,omitempty"`
+	Raw      json.RawMessage `json:"raw"`
 }
 type LocationV1 struct {
-	ID    string `json:"id"`
+	ID    string          `json:"id"`
+	Label string          `json:"label"`
+	Raw   json.RawMessage `json:"raw"`
+}
+type FilterSupportedValueV1 struct {
+	Value string `json:"value"`
 	Label string `json:"label"`
 }
 type FilterV1 struct {
-	Key         string `json:"key"`
-	Type        string `json:"type"`
-	SearchParam string `json:"search_param"`
-	SearchStyle string `json:"search_style"`
-	Proof       string `json:"proof"`
+	CategoryID      string                   `json:"category_id"`
+	Key             string                   `json:"key"`
+	Label           string                   `json:"label,omitempty"`
+	Type            string                   `json:"type"`
+	SearchParam     string                   `json:"search_param"`
+	SearchStyle     string                   `json:"search_style"`
+	SupportedValues []FilterSupportedValueV1 `json:"supported_values"`
+	Classification  string                   `json:"classification"`
+	Proof           string                   `json:"proof"`
+	Raw             json.RawMessage          `json:"raw"`
 }
 type ListingV1 struct {
 	ID           string `json:"id"`

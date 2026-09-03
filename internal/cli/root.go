@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -12,9 +13,11 @@ import (
 	"github.com/alecthomas/kong"
 	"github.com/johannhipp/kcli/internal/app"
 	"github.com/johannhipp/kcli/internal/domain"
+	"github.com/johannhipp/kcli/internal/kleinanzeigen"
 	"github.com/johannhipp/kcli/internal/output"
 	"github.com/johannhipp/kcli/internal/platform"
 	schemacatalog "github.com/johannhipp/kcli/internal/schema"
+	"github.com/johannhipp/kcli/internal/state"
 	kongcompletion "github.com/jotaen/kong-completion"
 )
 
@@ -176,6 +179,20 @@ func Execute(ctx context.Context, args []string, stdin io.Reader, stdout, stderr
 			root.Timeout, _ = time.ParseDuration(effective["timeout"].Value)
 		}
 	}
+	if requiresRemoteState(selected) {
+		database, err := state.Open(runtime.Context, runtime.Paths.StateDB)
+		if err != nil {
+			return fail(runtime, &domain.Error{Code: domain.CodeUnavailable, Message: "open profile state", Cause: err}, false)
+		}
+		defer database.Close()
+		installID, err := database.MobileInstallID(runtime.Context, time.Now().UTC())
+		if err != nil {
+			return fail(runtime, &domain.Error{Code: domain.CodeUnavailable, Message: "load mobile install identity", Cause: err}, false)
+		}
+		credentials := kleinanzeigen.MobileCredentials{BasicUser: os.Getenv("KLEINANZEIGEN_BASIC_USER"), BasicPassword: os.Getenv("KLEINANZEIGEN_BASIC_PW")}
+		mobile := kleinanzeigen.NewMobileTransport(kleinanzeigen.NewHTTPTransport(), installID, credentials, database)
+		runtime.Core = app.New(app.Dependencies{Transport: mobile, State: database})
+	}
 	if root.Output != "" {
 		format, err := output.ParseFormat(root.Output)
 		if err != nil {
@@ -215,6 +232,10 @@ func selectedPath(node *kong.Node) string {
 		parts[left], parts[right] = parts[right], parts[left]
 	}
 	return strings.Join(parts, " ")
+}
+
+func requiresRemoteState(path string) bool {
+	return strings.HasPrefix(path, "category ") || strings.HasPrefix(path, "location ") || strings.HasPrefix(path, "filter ")
 }
 func defaultFormat(stdout io.Writer) output.Format {
 	if output.IsTTY(stdout) {

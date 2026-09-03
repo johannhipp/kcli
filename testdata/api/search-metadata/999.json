@@ -1,0 +1,15 @@
+{
+  "data": {
+    "http://www.ebayclassifiedsgroup.com/schema/ad/v1": {
+      "ads-search-options": {
+        "future-shape": {
+          "localized-label": "Unbekannt",
+          "type": "geospatial-polygon",
+          "search-param": "optional",
+          "search-style": "contains-area",
+          "future-field": {"kept": true}
+        }
+      }
+    }
+  }
+}

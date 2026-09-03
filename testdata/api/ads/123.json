@@ -1,0 +1,15 @@
+{
+  "data": {
+    "http://www.ebayclassifiedsgroup.com/schema/ad/v1": {
+      "ad": {
+        "id": "123",
+        "title": "Beispiel &amp; Test",
+        "description": {"value": "Reduzierter Fixture-Text"},
+        "price": {"amount": "12.50", "price-type": "FIXED"},
+        "category": {"id": "278"},
+        "link": {"rel": "self-public-website", "href": "https://www.kleinanzeigen.de/s-anzeige/123"},
+        "unknown-detail-field": "preserved"
+      }
+    }
+  }
+}

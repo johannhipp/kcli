@@ -1,0 +1,32 @@
+{
+  "data": {
+    "http://www.ebayclassifiedsgroup.com/schema/ad/v1": {
+      "ads-search-options": {
+        "condition": {
+          "localized-label": "Zustand",
+          "type": "enum",
+          "search-param": "optional",
+          "search-style": "eq",
+          "supported-value": [
+            {"value": "new", "localized-label": "Neu"},
+            {"value": "used", "localized-label": "Gebraucht"}
+          ],
+          "version": "fixture"
+        },
+        "features": {
+          "localized-label": "Merkmale",
+          "type": "string",
+          "search-param": "optional",
+          "search-style": "in",
+          "supported-value": {"value": "light", "localized-label": "Licht"}
+        },
+        "legacy": {
+          "localized-label": "Alt",
+          "type": "string",
+          "search-param": "unsupported",
+          "search-style": "eq"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "data": {
+    "http://www.ebayclassifiedsgroup.com/schema/category/v1": {
+      "categories": {
+        "category": [
+          {
+            "id": {"value": "278"},
+            "localized-name": {"value": "Fahrräder &amp; Zubehör"},
+            "unknown-category-field": "preserved",
+            "category": {
+              "id": "279",
+              "localized-name": "Fahrradteile"
+            }
+          },
+          {
+            "id": "100",
+            "localized-name": "Haus &amp; Garten"
+          }
+        ]
+      }
+    }
+  }
+}

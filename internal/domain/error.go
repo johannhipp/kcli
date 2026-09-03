@@ -21,6 +21,7 @@ const (
 	CodeNotFound               ErrorCode = "not_found"
 	CodeUnavailable            ErrorCode = "unavailable"
 	CodeUpstream               ErrorCode = "upstream_failure"
+	CodeUpstreamContract       ErrorCode = "upstream_contract"
 	CodeConnectivity           ErrorCode = "connectivity_failure"
 	CodeRateLimited            ErrorCode = "rate_limited"
 	CodeRateLimitedLocal       ErrorCode = "rate_limited_local"
@@ -83,7 +84,7 @@ func ExitCode(err error) int {
 		return 3
 	case CodeNotFound, CodeUnavailable:
 		return 4
-	case CodeUpstream, CodeConnectivity:
+	case CodeUpstream, CodeUpstreamContract, CodeConnectivity:
 		return 5
 	case CodeRateLimited, CodeRateLimitedLocal:
 		return 6

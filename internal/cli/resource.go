@@ -74,7 +74,6 @@ func (c *SearchCmd) Describe() app.OperationMeta {
 
 type CategoryListCmd struct{ Refresh bool }
 
-func (*CategoryListCmd) Run(*Runtime) error { return domain.NotImplemented("category list") }
 func (*CategoryListCmd) Describe() app.OperationMeta {
 	return operation("List the cached or refreshed category tree.", domain.CategoryListInputV1{}, domain.CategoryListOutputV1{}, "kcli.categories/v1", false, app.SideEffectLocal, false, app.EvidenceLive, 0, 0, []string{"kcli category list"}, []string{"V01-SEARCH-02"})
 }
@@ -83,8 +82,7 @@ type CategoryGetCmd struct {
 	IDOrPath string `arg:"" name:"id-or-path"`
 }
 
-func (c *CategoryGetCmd) Validate() error  { return validateReference(c.IDOrPath, true) }
-func (*CategoryGetCmd) Run(*Runtime) error { return domain.NotImplemented("category get") }
+func (c *CategoryGetCmd) Validate() error { return validateReference(c.IDOrPath, true) }
 func (*CategoryGetCmd) Describe() app.OperationMeta {
 	return operation("Resolve one category by ID or path.", domain.CategoryGetInputV1{}, domain.CategoryOutputV1{}, "kcli.category/v1", false, app.SideEffectNone, false, app.EvidenceLive, 0, 0, []string{"kcli category get 278"}, []string{"V01-SEARCH-02"})
 }
@@ -93,8 +91,7 @@ type CategorySearchCmd struct {
 	Text string `arg:""`
 }
 
-func (c *CategorySearchCmd) Validate() error  { return validateText(c.Text, 256, "category text") }
-func (*CategorySearchCmd) Run(*Runtime) error { return domain.NotImplemented("category search") }
+func (c *CategorySearchCmd) Validate() error { return validateText(c.Text, 256, "category text") }
 func (*CategorySearchCmd) Describe() app.OperationMeta {
 	return operation("Search category labels and paths locally.", domain.CategorySearchInputV1{}, domain.CategoryListOutputV1{}, "kcli.categories/v1", false, app.SideEffectNone, false, app.EvidenceLocal, 25, 100, []string{"kcli category search fahrrad"}, []string{"V01-SEARCH-02"})
 }
@@ -113,7 +110,6 @@ func (c *LocationResolveCmd) Validate() error {
 	}
 	return nil
 }
-func (*LocationResolveCmd) Run(*Runtime) error { return domain.NotImplemented("location resolve") }
 func (*LocationResolveCmd) Describe() app.OperationMeta {
 	return operation("Resolve a place or postcode to mobile location IDs.", domain.LocationResolveInputV1{}, domain.LocationOutputV1{}, "kcli.locations/v1", false, app.SideEffectLocal, false, app.EvidenceLive, 10, 100, []string{"kcli location resolve Berlin"}, []string{"V01-SEARCH-03"})
 }
@@ -123,8 +119,7 @@ type FilterListCmd struct {
 	Refresh  bool
 }
 
-func (c *FilterListCmd) Validate() error  { return validateReference(c.Category, true) }
-func (*FilterListCmd) Run(*Runtime) error { return domain.NotImplemented("filter list") }
+func (c *FilterListCmd) Validate() error { return validateReference(c.Category, true) }
 func (*FilterListCmd) Describe() app.OperationMeta {
 	return operation("List dynamic filters advertised for a category.", domain.FilterListInputV1{}, domain.FilterListOutputV1{}, "kcli.filters/v1", false, app.SideEffectLocal, false, app.EvidenceSource, 0, 0, []string{"kcli filter list --category 278"}, []string{"V01-SEARCH-05", "V01-SEARCH-06"})
 }
@@ -140,7 +135,6 @@ func (c *FilterGetCmd) Validate() error {
 	}
 	return validateReference(c.Key, false)
 }
-func (*FilterGetCmd) Run(*Runtime) error { return domain.NotImplemented("filter get") }
 func (*FilterGetCmd) Describe() app.OperationMeta {
 	return operation("Show one dynamic filter and its serialization proof.", domain.FilterGetInputV1{}, domain.FilterOutputV1{}, "kcli.filter/v1", false, app.SideEffectNone, false, app.EvidenceSource, 0, 0, []string{"kcli filter get --category 278 condition"}, []string{"V01-SEARCH-05", "V01-SEARCH-06"})
 }
