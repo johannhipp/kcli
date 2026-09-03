@@ -133,7 +133,7 @@ func searchParseListing(object map[string]any) (SearchListing, error) {
 		}
 	}
 	url := searchPublicURL(object)
-	summary := domain.ListingSummaryV1{ID: id, Title: title, Price: amount, PriceCents: searchPriceCents(amount), URL: url}
+	summary := domain.ListingSummaryV1{ID: id, Title: title, Price: amount, PriceCents: searchPriceCents(amount), URL: url, Status: status, Source: "mobile-api", Completeness: domain.CompletenessBestEffort}
 	seller := searchParseSeller(object)
 	return SearchListing{Summary: summary, Description: description, Status: status, Seller: seller}, nil
 }
@@ -145,7 +145,7 @@ func searchParseSeller(object map[string]any) SearchSeller {
 		return SearchSeller{}
 	}
 	public := make(map[string]any)
-	for _, key := range []string{"user-id", "contact-name", "contact-name-initials", "seller-account-type", "poster-type", "user-since-date-time", "user-rating", "userBadges"} {
+	for _, key := range []string{"user-id", "contact-name", "contact-name-initials", "seller-account-type", "poster-type", "user-since-date-time", "account-age", "user-rating", "userBadges", "company", "company-name", "company-details"} {
 		if value, ok := searchDirectField(object, key); ok {
 			public[key] = value
 		}

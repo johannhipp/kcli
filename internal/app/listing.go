@@ -90,6 +90,10 @@ func (a *App) listingDetail(ctx context.Context, reference string) (kleinanzeige
 		return kleinanzeigen.ListingDetail{}, time.Time{}, err
 	}
 	observedAt := a.Clock.Now().UTC()
+	detail.Seller.Source = "listing"
+	detail.Seller.Completeness = domain.CompletenessDirect
+	detail.Seller.ObservedAt = observedAt
+	detail.Listing.Seller = detail.Seller
 	if detail.Seller.ID != "" && detail.Seller.Name != "" {
 		foldedName := sellerFoldName(detail.Seller.Name)
 		if !sellerIDPattern.MatchString(detail.Seller.ID) || foldedName == "" {

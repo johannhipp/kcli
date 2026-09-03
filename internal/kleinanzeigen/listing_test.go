@@ -67,6 +67,33 @@ func TestListingParseCoversDetailSellerMediaAndRedactedRaw(t *testing.T) {
 	if len(detail.Media) != 3 || detail.Media[0].Relation != "XXL" || detail.Media[2].Index != 1 {
 		t.Fatalf("media=%#v", detail.Media)
 	}
+	if detail.Listing.Category == nil || detail.Listing.Category.ID != "246" || detail.Listing.Category.Path != "Haus/Lampen" || detail.Listing.Category.Label != "Lampen" {
+		t.Fatalf("category=%#v", detail.Listing.Category)
+	}
+	if detail.Listing.AdType != "OFFERED" || detail.Listing.Status != "ACTIVE" || len(detail.Listing.Labels) != 1 || detail.Listing.Labels[0] != "pickup" || detail.Listing.PostedAt != "2026-08-31T10:00:00Z" || detail.Listing.EndsAt != "2026-09-30T10:00:00Z" || detail.Listing.ViewCount == nil || *detail.Listing.ViewCount != 42 || detail.Listing.PriceType != "FIXED" {
+		t.Fatalf("listing detail fields=%#v", detail.Listing)
+	}
+	if detail.Listing.Location == nil || detail.Listing.Location.Label != "Berlin" || detail.Listing.Location.Postcode != "10115" || detail.Listing.Location.Latitude != "52.52" || detail.Listing.Location.Longitude != "13.40" || detail.Listing.Location.Distance != "3.2" || !detail.Listing.Location.Approximate {
+		t.Fatalf("location=%#v", detail.Listing.Location)
+	}
+	if detail.Listing.Pickup == nil || !*detail.Listing.Pickup || detail.Listing.Shipping == nil || detail.Listing.Shipping.Available == nil || !*detail.Listing.Shipping.Available || detail.Listing.Shipping.Cost != "4.50" {
+		t.Fatalf("fulfillment fields pickup=%v shipping=%#v", detail.Listing.Pickup, detail.Listing.Shipping)
+	}
+	if len(detail.Listing.Attributes) != 2 || detail.Listing.Attributes[0].Name != "condition" || detail.Listing.Attributes[0].Value != "GOOD" || detail.Listing.Attributes[1].Name != "future-attribute" || detail.Listing.Attributes[1].Public["unknown-attribute-field"] != "preserved" {
+		t.Fatalf("ordered attributes=%#v", detail.Listing.Attributes)
+	}
+	if len(detail.Listing.Media) != 3 || detail.Listing.Media[0].Width != 1600 || detail.Listing.Media[0].SizeLabel != "original" || detail.Listing.Media[2].Height != 480 {
+		t.Fatalf("typed media=%#v", detail.Listing.Media)
+	}
+	if detail.Listing.PosterType != "PRIVATE" || detail.Listing.Seller.AccountType != "COMMERCIAL" || detail.Listing.Seller.AccountSince != "2019-01-02T00:00:00Z" || detail.Listing.Seller.Rating == nil || detail.Listing.Seller.Rating.Score != "4.9" || detail.Listing.Seller.Rating.Count == nil || *detail.Listing.Seller.Rating.Count != 88 || len(detail.Listing.Seller.Badges) != 2 || detail.Listing.Seller.Company == nil || detail.Listing.Seller.Company.Name != "Beispiel Licht GmbH" {
+		t.Fatalf("typed seller=%#v", detail.Listing.Seller)
+	}
+	if unknown, ok := detail.Listing.AdditionalFields["unknown-top-level-field"].(map[string]any); !ok || unknown["kept"] != true {
+		t.Fatalf("additional fields=%#v", detail.Listing.AdditionalFields)
+	}
+	if _, leaked := detail.Listing.AdditionalFields["access_token"]; leaked {
+		t.Fatalf("sensitive field entered typed output: %#v", detail.Listing.AdditionalFields)
+	}
 	for _, field := range []string{"category", "ad-type", "poster-type", "status", "labels", "start-date-time", "end-date-time", "view-count", "contract-warnings", "ad-address", "distance", "shipping", "pickup", "attributes", "pictures", "seller", "media", "availability"} {
 		if _, ok := detail.Normalized[field]; !ok {
 			t.Errorf("known fixture field %q was not normalized", field)

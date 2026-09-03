@@ -97,7 +97,9 @@ func (a *App) Search(ctx context.Context, input domain.SearchInputV1) (domain.Se
 			if searchExcluded(listing, canonical.Exclusions) {
 				continue
 			}
-			listings = append(listings, listing.Summary)
+			summary := listing.Summary
+			summary.ObservedAt = observedAt
+			listings = append(listings, summary)
 			if len(listings) == canonical.Limit {
 				break
 			}

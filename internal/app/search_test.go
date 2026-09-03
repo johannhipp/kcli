@@ -115,6 +115,11 @@ func TestSearchPaginatesDeduplicatesExcludesAndIndexesSellers(t *testing.T) {
 	if len(result.Data) != 2 || result.Data[0].ID != "100000000001" || result.Data[1].ID != "100000000003" {
 		t.Fatalf("results = %#v", result.Data)
 	}
+	for _, listing := range result.Data {
+		if listing.Status == "" || listing.Source != "mobile-api" || listing.Completeness != domain.CompletenessBestEffort || listing.ObservedAt.IsZero() {
+			t.Fatalf("search listing metadata = %#v", listing)
+		}
+	}
 	if result.Page == nil || result.Page.Fetched != 4 || result.Page.Returned != 2 {
 		t.Fatalf("page = %#v", result.Page)
 	}

@@ -1,16 +1,21 @@
 package app
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
 
 	"github.com/johannhipp/kcli/internal/domain"
+	"github.com/johannhipp/kcli/internal/kleinanzeigen"
 	"github.com/johannhipp/kcli/internal/state"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/unicode/norm"
@@ -37,7 +42,7 @@ func (a *App) SellerGet(ctx context.Context, input domain.SellerGetInputV1, requ
 		if detail.Seller.ID == "" || detail.Seller.Name == "" {
 			return domain.SellerOutputV1{}, &domain.Error{Code: domain.CodeNotFound, Message: "listing detail did not expose a seller"}
 		}
-		data := domain.SellerV1{ID: detail.Seller.ID, Name: detail.Seller.Name, Source: "listing", Completeness: string(domain.CompletenessDirect)}
+		data := detail.Seller
 		envelope := Envelope(a.Clock, "kcli.seller/v1", requestID, "listing", data)
 		envelope.ObservedAt = observedAt
 		envelope.Completeness = domain.CompletenessDirect
@@ -59,7 +64,10 @@ func (a *App) SellerGet(ctx context.Context, input domain.SellerGetInputV1, requ
 	if profileLink {
 		source = "profile-link"
 	}
-	data := domain.SellerV1{ID: snapshot.ID, Name: snapshot.DisplayName, Source: source, Completeness: string(domain.CompletenessBestEffort)}
+	data, err := sellerSnapshotData(snapshot, source, domain.CompletenessBestEffort)
+	if err != nil {
+		return domain.SellerOutputV1{}, err
+	}
 	envelope := Envelope(a.Clock, "kcli.seller/v1", requestID, source, data)
 	envelope.ObservedAt = snapshot.ObservedAt
 	envelope.Completeness = domain.CompletenessBestEffort
@@ -85,7 +93,11 @@ func (a *App) SellerSearch(ctx context.Context, input domain.SellerSearchInputV1
 	}
 	items := make([]domain.SellerV1, 0, len(snapshots))
 	for _, snapshot := range snapshots {
-		items = append(items, domain.SellerV1{ID: snapshot.ID, Name: snapshot.DisplayName, Source: "local-index", Completeness: string(domain.CompletenessBestEffort)})
+		item, decodeErr := sellerSnapshotData(snapshot, "local-index", domain.CompletenessBestEffort)
+		if decodeErr != nil {
+			return domain.SellerListOutputV1{}, decodeErr
+		}
+		items = append(items, item)
 	}
 	envelope := Envelope(a.Clock, "kcli.sellers/v1", requestID, "local-index", items)
 	envelope.Completeness = domain.CompletenessBestEffort
@@ -123,7 +135,15 @@ func (a *App) SellerListings(ctx context.Context, input domain.SellerListingsInp
 	}
 	items := make([]domain.ListingSummaryV1, 0, len(known))
 	for _, item := range known {
-		items = append(items, domain.ListingSummaryV1{ID: item.ListingID, Title: item.Title, URL: item.URL})
+		items = append(items, domain.ListingSummaryV1{
+			ID:           item.ListingID,
+			Title:        item.Title,
+			URL:          item.URL,
+			Status:       item.Status,
+			Source:       "local-index",
+			Completeness: domain.CompletenessKnownOnly,
+			ObservedAt:   item.ObservedAt,
+		})
 	}
 	info, err := a.State.SellerIndexInfo(ctx)
 	if err != nil {
@@ -134,6 +154,129 @@ func (a *App) SellerListings(ctx context.Context, input domain.SellerListingsInp
 	envelope.Completeness = domain.CompletenessKnownOnly
 	envelope.Warnings = []domain.WarningV1{sellerIndexWarning(info), {Code: "known_only", Message: "results include only listings encountered by this local profile", Details: map[string]any{"seller_id": id}}}
 	return domain.SellerListingsOutputV1{Envelope: envelope}, nil
+}
+
+func sellerSnapshotData(snapshot state.SellerSnapshot, source string, completeness domain.Completeness) (domain.SellerV1, error) {
+	decoder := json.NewDecoder(bytes.NewReader(snapshot.PublicJSON))
+	decoder.UseNumber()
+	public := make(map[string]any)
+	if err := decoder.Decode(&public); err != nil {
+		return domain.SellerV1{}, &domain.Error{Code: domain.CodeUnavailable, Message: "decode public seller snapshot", Cause: err}
+	}
+	var trailing any
+	if err := decoder.Decode(&trailing); err != io.EOF {
+		return domain.SellerV1{}, &domain.Error{Code: domain.CodeUnavailable, Message: "public seller snapshot contains trailing data"}
+	}
+	data := domain.SellerV1{
+		ID:           snapshot.ID,
+		Name:         snapshot.DisplayName,
+		Badges:       sellerPublicStrings(public["userBadges"]),
+		Public:       public,
+		Source:       source,
+		Completeness: completeness,
+		ObservedAt:   snapshot.ObservedAt,
+	}
+	data.ContactInitials = sellerPublicString(public, "contact-name-initials")
+	data.ProfileURL = sellerPublicString(public, "profile-url")
+	data.AccountType = sellerPublicString(public, "seller-account-type")
+	data.AccountSince = sellerPublicString(public, "user-since-date-time")
+	data.AccountAge = sellerPublicString(public, "account-age")
+	data.PosterType = sellerPublicString(public, "poster-type")
+	if value, ok := public["user-rating"]; ok {
+		rating := &domain.SellerRatingV1{}
+		if object, isObject := value.(map[string]any); isObject {
+			rating.Public = object
+			rating.Score = sellerPublicFirstString(object, "score", "average", "value")
+			rating.Count = sellerPublicInt64(object["count"])
+		} else {
+			rating.Score, _ = kleinanzeigen.StringValue(value)
+		}
+		data.Rating = rating
+	}
+	companyName := sellerPublicString(public, "company-name")
+	companyValue, hasCompany := public["company"]
+	companyDetails, hasDetails := public["company-details"]
+	if companyName != "" || hasCompany || hasDetails {
+		company := &domain.SellerCompanyV1{Name: companyName}
+		if object, isObject := companyValue.(map[string]any); isObject {
+			company.Details = sellerCopyPublic(object)
+			if company.Name == "" {
+				company.Name = sellerPublicFirstString(object, "name", "company-name")
+			}
+		} else if hasCompany {
+			company.Details = map[string]any{"value": companyValue}
+		}
+		if object, isObject := companyDetails.(map[string]any); isObject {
+			if company.Details == nil {
+				company.Details = make(map[string]any)
+			}
+			for key, value := range object {
+				company.Details[key] = value
+			}
+		} else if hasDetails {
+			if company.Details == nil {
+				company.Details = make(map[string]any)
+			}
+			company.Details["details"] = companyDetails
+		}
+		data.Company = company
+	}
+	return data, nil
+}
+
+func sellerPublicString(public map[string]any, name string) string {
+	value, ok := public[name]
+	if !ok {
+		return ""
+	}
+	text, _ := kleinanzeigen.StringValue(value)
+	return text
+}
+
+func sellerPublicFirstString(public map[string]any, names ...string) string {
+	for _, name := range names {
+		if value := sellerPublicString(public, name); value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func sellerPublicStrings(value any) []string {
+	if value == nil {
+		return []string{}
+	}
+	items, ok := value.([]any)
+	if !ok {
+		items = []any{value}
+	}
+	result := make([]string, 0, len(items))
+	for _, item := range items {
+		if text, valid := kleinanzeigen.StringValue(item); valid {
+			result = append(result, text)
+		}
+	}
+	return result
+}
+
+func sellerPublicInt64(value any) *int64 {
+	text, ok := kleinanzeigen.StringValue(value)
+	if !ok {
+		return nil
+	}
+	integer, err := strconv.ParseInt(text, 10, 64)
+	if err != nil {
+		return nil
+	}
+	return &integer
+}
+
+func sellerCopyPublic(public map[string]any) map[string]any {
+	copy := make(map[string]any, len(public))
+	for key, value := range public {
+		copy[key] = value
+	}
+	return copy
 }
 
 func sellerReferenceID(reference string) (string, bool, error) {

@@ -1,6 +1,7 @@
 package app
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -65,6 +66,21 @@ func TestListingUseCasesNormalizeEnumerateOpenAndIndexSeller(t *testing.T) {
 	if listing.Schema != "kcli.listing/v1" || listing.Data.ID != "1234567890" || listing.Data.Availability != "available" || listing.Data.AmountCents == nil || *listing.Data.AmountCents != 1995 || len(listing.Raw) == 0 {
 		t.Fatalf("listing output=%#v", listing)
 	}
+	if listing.Data.Category == nil || listing.Data.Category.ID != "246" || listing.Data.Location == nil || listing.Data.Location.Postcode != "10115" || listing.Data.Status != "ACTIVE" || listing.Data.PostedAt == "" || listing.Data.ViewCount == nil || len(listing.Data.Attributes) != 2 || listing.Data.Attributes[1].Public["unknown-attribute-field"] != "preserved" || len(listing.Data.Media) != 3 {
+		t.Fatalf("listing typed envelope is incomplete: %#v", listing.Data)
+	}
+	if listing.Data.Seller.AccountType != "COMMERCIAL" || listing.Data.Seller.AccountSince == "" || listing.Data.Seller.Rating == nil || listing.Data.Seller.Rating.Score != "4.9" || len(listing.Data.Seller.Badges) != 2 || listing.Data.Seller.Company == nil || listing.Data.Seller.Company.Name == "" || listing.Data.Seller.ObservedAt.IsZero() {
+		t.Fatalf("listing seller metadata is incomplete: %#v", listing.Data.Seller)
+	}
+	encoded, err := json.Marshal(listing)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, secret := range []string{"fixture-token-must-not-appear", "fixture.user@example.invalid", "fixture-password", "Bearer "} {
+		if bytes.Contains(encoded, []byte(secret)) {
+			t.Fatalf("listing output leaked %q: %s", secret, encoded)
+		}
+	}
 	if string(listing.Raw) == "" || !json.Valid(listing.Raw) {
 		t.Fatalf("raw=%q", listing.Raw)
 	}
@@ -99,19 +115,19 @@ func TestSellerLocalCommandsAreScopeLabeledAndNFKCFolded(t *testing.T) {
 		t.Fatal(err)
 	}
 	direct, err := app.SellerGet(ctx, domain.SellerGetInputV1{Listing: "1234567890"}, "direct")
-	if err != nil || direct.Source != "listing" || direct.Data.Source != "listing" || direct.Data.Completeness != "direct" || direct.ObservedAt.IsZero() {
+	if err != nil || direct.Source != "listing" || direct.Data.Source != "listing" || direct.Data.Completeness != "direct" || direct.ObservedAt.IsZero() || direct.Data.ObservedAt.IsZero() || direct.Data.AccountType != "COMMERCIAL" || direct.Data.Rating == nil || direct.Data.Rating.Score != "4.9" || len(direct.Data.Badges) != 2 || direct.Data.Company == nil {
 		t.Fatalf("direct=%#v err=%v", direct, err)
 	}
 	profile, err := app.SellerGet(ctx, domain.SellerGetInputV1{IDOrURL: "https://api.kleinanzeigen.de/api/users/987654321"}, "profile")
-	if err != nil || profile.Source != "profile-link" || profile.Data.Completeness != "best-effort" {
+	if err != nil || profile.Source != "profile-link" || profile.Data.Completeness != "best-effort" || profile.Data.Source != "profile-link" || profile.Data.ObservedAt.IsZero() || profile.Data.AccountSince == "" || profile.Data.Rating == nil || profile.Data.Company == nil || profile.Data.Public["company-name"] == nil {
 		t.Fatalf("profile=%#v err=%v", profile, err)
 	}
 	search, err := app.SellerSearch(ctx, domain.SellerSearchInputV1{Name: "ＨÄNDLER ÄNNE", Match: "exact"}, "search")
-	if err != nil || len(search.Data) != 1 || search.Data[0].Source != "local-index" || search.Data[0].Completeness != "best-effort" || len(search.Warnings) < 2 {
+	if err != nil || len(search.Data) != 1 || search.Data[0].Source != "local-index" || search.Data[0].Completeness != "best-effort" || search.Data[0].ObservedAt.IsZero() || search.Data[0].AccountType != "COMMERCIAL" || search.Data[0].Rating == nil || len(search.Data[0].Badges) != 2 || search.Data[0].Company == nil || len(search.Warnings) < 2 {
 		t.Fatalf("search=%#v err=%v", search, err)
 	}
 	listings, err := app.SellerListings(ctx, domain.SellerListingsInputV1{IDOrURL: "987654321", Limit: 10}, "listings")
-	if err != nil || listings.Completeness != domain.CompletenessKnownOnly || len(listings.Data) != 1 || listings.Data[0].ID != "1234567890" || listings.ObservedAt.IsZero() {
+	if err != nil || listings.Completeness != domain.CompletenessKnownOnly || len(listings.Data) != 1 || listings.Data[0].ID != "1234567890" || listings.Data[0].Status != "available" || listings.Data[0].Source != "local-index" || listings.Data[0].Completeness != domain.CompletenessKnownOnly || listings.Data[0].ObservedAt.IsZero() || listings.ObservedAt.IsZero() {
 		t.Fatalf("listings=%#v err=%v", listings, err)
 	}
 }
