@@ -1,0 +1,11 @@
+{
+  "ad": {
+    "id": "1234567890",
+    "title": "Reserved fixture listing",
+    "status": "RESERVED",
+    "price": {"amount": "10", "price-type": "FIXED"},
+    "contact-name": "Fixture Seller",
+    "user-id": "987654321",
+    "link": {"rel": "self-public-website", "href": "https://www.kleinanzeigen.de/s-anzeige/reserved/1234567890-1-1"}
+  }
+}

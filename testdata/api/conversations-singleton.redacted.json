@@ -1,0 +1,15 @@
+{
+  "data": {
+    "items": {
+      "id": "conv-single",
+      "adId": "listing-single",
+      "adTitle": "[REDACTED_LISTING_TITLE]",
+      "role": "BUYER",
+      "sellerName": "[REDACTED_COUNTERPARTY]",
+      "unread": "true",
+      "unreadMessagesCount": "1",
+      "receivedDate": "2026-09-01T08:00:00+02:00",
+      "textShortTrimmed": "[REDACTED_PREVIEW]"
+    }
+  }
+}

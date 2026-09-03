@@ -1,0 +1,18 @@
+{
+  "data": {
+    "http://www.ebayclassifiedsgroup.com/schema/location/v1": {
+      "locations": {
+        "location": {
+          "id": {"value": "10"},
+          "localized-name": {"value": "Berlin"},
+          "id-name": "berlin",
+          "unknown-location-field": true,
+          "location": [
+            {"id": "11", "localized-name": "Berlin-Mitte"},
+            {"id": "12", "localized-name": "Berlin-Neukölln"}
+          ]
+        }
+      }
+    }
+  }
+}

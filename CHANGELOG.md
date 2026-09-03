@@ -37,6 +37,10 @@ The first planned release is `0.1.0`. There are no tagged releases yet.
 - Initial repository hygiene: ignore and line-ending rules, shared editor
   settings, a Conventional Commit template, contribution and security policies,
   a pull-request checklist, and documentation-contract CI.
+- Functional `category`, `location`, and `filter` discovery commands backed by the bounded mobile transport, with raw evidence fields and fail-closed behavior when distribution credentials are absent.
+- Added search, listing, seller, and authentication command families over the bounded mobile transport and the profile-local state, with strictly validated identifiers, fail-closed access when credentials are absent, and no live-network experiments.
+- Added the authenticated DM surface: inbox reads with body-free fingerprints and account isolation, preview-bound single-confirm reply/start messaging (digest-only plans, atomic single-use claims, ambiguous-outcome reconciliation), and resumable list-only `dm poll` plus foreground NDJSON `dm watch`.
+- Hardening: staticcheck and govulncheck lanes, a six-target cross-compile lane, an installable kcli agent skill, and a `go` toolchain pin with no standard-library vulnerabilities.
 
 ### Changed
 
@@ -56,6 +60,15 @@ The first planned release is `0.1.0`. There are no tagged releases yet.
 - Reduced the v0.1 output/dependency surface to tables, JSON, NDJSON, redacted
   raw JSON, and field selection; YAML, embedded jq, PowerShell completion, and
   refresh-token environment injection are deferred.
+- Second plan review pass: replaced the OAuth/OIDC libraries with
+  standard-library PKCE, JSON token grants, and ID-token claim checks (TLS
+  back-channel validation per OIDC Core §3.1.3.7); replaced the keyring
+  fail-closed size ceiling with chunking at the real Windows limit; removed
+  `dm get --mark-read` and the public-website location fallback from v0.1;
+  specified exit codes for `resync_required`, `rate_limited_local`, and
+  `SIGTERM`; fixed the watch interval floor and monotonic cursor head; defined
+  the release-snapshot filter audit; and allowed offline phases to proceed
+  while phase-0 permission gates are pending.
 
 ### Fixed
 

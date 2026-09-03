@@ -124,7 +124,7 @@ token-family behavior are verified.
 ```text
 kcli dm list [--unread] [--page NUMBER] [--page-size NUMBER]
   [--paginate] [--limit NUMBER]
-kcli dm get CONVERSATION_ID [--mark-read]
+kcli dm get CONVERSATION_ID
 kcli dm mark-read CONVERSATION_ID... [--dry-run]
 
 kcli dm poll [--after CURSOR | --since TIME_OR_NOW]
@@ -137,11 +137,16 @@ kcli dm watch [--after CURSOR | --since TIME_OR_NOW]
 `poll` runs once. Without an explicit cursor it uses the named profile's stored
 cursor; first use requires `--since`. It advances durable state only after a
 complete stored batch and successful stdout flush. `--no-advance` is available
-for replay and diagnostics. Both commands observe conversation-summary changes
-by default. `--open-changed` additionally calls the state-touching conversation
-`PUT` to identify changed messages; help and schemas label that side effect.
-`watch` repeats the same operation until interrupted and emits
-`kcli.event/v1` NDJSON.
+for replay and diagnostics. The stored cursor head only moves forward: an
+explicit older `--after` replays from that point but never rewinds the head.
+`poll` is a finite command, so its output follows the global rules: one JSON
+envelope containing the events and the resulting cursor, or, with explicit
+NDJSON, event lines followed by a `kcli.summary/v1` line. Both commands observe
+conversation-summary changes by default. `--open-changed` additionally calls
+the state-touching conversation `PUT` to identify changed messages; help and
+schemas label that side effect. `watch` repeats the same operation until
+interrupted and emits `kcli.event/v1` NDJSON. Its `--interval` floor is the
+30-second default; the flag can only slow polling down.
 
 ### Communicate — **v0.1**
 
@@ -245,14 +250,15 @@ families will not be reserved.
 |---:|---|
 | `0` | Complete success; partial/resource state is represented in output |
 | `1` | Unclassified failure |
-| `2` | Invalid command, identifier, input, or schema |
+| `2` | Invalid command, identifier, input, schema, or a cursor that does not belong to this profile/store (`resync_required`) |
 | `3` | Login required, expired, or revoked |
 | `4` | Resource unavailable or not found |
 | `5` | Retryable upstream or connectivity failure |
-| `6` | Rate limited; retry metadata is in the structured error |
+| `6` | Rate limited, by the service (`rate_limited`) or by the local cross-process reservation queue (`rate_limited_local`); retry metadata is in the structured error |
 | `7` | Confirmation missing, expired, mismatched, warning-blocked, or unresolved-duplicate acknowledgement required |
 | `8` | An external mutation may have succeeded; reconcile before any retry |
 | `130` | Interrupted with `SIGINT` |
+| `143` | Terminated with `SIGTERM` |
 
 Every nonzero structured result has a stable error `code`, human `message`,
 `retryable` boolean, and optional `retry_after`, `details`, and `request_id`.

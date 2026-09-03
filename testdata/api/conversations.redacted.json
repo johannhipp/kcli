@@ -1,0 +1,36 @@
+{
+  "conversations": [
+    {
+      "id": "conv-new",
+      "adId": "listing-one",
+      "adTitle": "[REDACTED_LISTING_TITLE]",
+      "adStatus": "AVAILABLE",
+      "role": "BUYER",
+      "sellerName": "[REDACTED_COUNTERPARTY_A]",
+      "buyerName": "[REDACTED_ACCOUNT_NAME]",
+      "unread": true,
+      "unreadMessagesCount": 2,
+      "messageCount": 5,
+      "receivedDate": "2026-09-03T12:05:00Z",
+      "textShortTrimmed": "[REDACTED_PREVIEW]"
+    },
+    {
+      "id": "conv-old",
+      "adId": "listing-two",
+      "adTitle": "[REDACTED_LISTING_TITLE]",
+      "role": "SELLER",
+      "sellerName": "[REDACTED_ACCOUNT_NAME]",
+      "buyerName": "[REDACTED_COUNTERPARTY_B]",
+      "unread": false,
+      "unreadMessagesCount": 0,
+      "messageCount": 1,
+      "receivedDate": "2026-09-02T09:00:00Z",
+      "textShortTrimmed": "[REDACTED_PREVIEW]"
+    },
+    {
+      "adId": "listing-without-conversation",
+      "role": "BUYER",
+      "unread": true
+    }
+  ]
+}
