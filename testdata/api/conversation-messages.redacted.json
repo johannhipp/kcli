@@ -1,0 +1,32 @@
+{
+  "data": {
+    "id": "conv-new",
+    "adId": "listing-one",
+    "adTitle": "[REDACTED_LISTING_TITLE]",
+    "role": "BUYER",
+    "sellerName": "[REDACTED_COUNTERPARTY_A]",
+    "messages": [
+      {
+        "id": "message-new",
+        "type": "TEXT",
+        "direction": "OUT",
+        "receivedDate": "2026-09-03T12:04:00Z",
+        "text": "[REDACTED_MESSAGE]"
+      },
+      {
+        "type": "ATTACHMENT",
+        "boundness": "IN",
+        "receivedDate": "2026-09-03T11:59:00Z",
+        "title": "[REDACTED_MESSAGE]",
+        "attachment": {"mediaType": "image"}
+      },
+      {
+        "id": "message-unknown-direction",
+        "type": "SYSTEM",
+        "direction": "SIDEWAYS",
+        "receivedDate": "2026-09-03T12:02:00Z",
+        "textShort": "[REDACTED_MESSAGE]"
+      }
+    ]
+  }
+}

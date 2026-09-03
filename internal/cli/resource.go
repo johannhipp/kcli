@@ -262,7 +262,6 @@ func (c *DMListCmd) Validate() error {
 	}
 	return nil
 }
-func (*DMListCmd) Run(*Runtime) error { return domain.NotImplemented("dm list") }
 func (*DMListCmd) Describe() app.OperationMeta {
 	return operation("List bounded conversation summaries newest first.", domain.DMListInputV1{}, domain.DMListOutputV1{}, "kcli.conversations/v1", true, app.SideEffectNone, false, app.EvidenceSource, 50, 500, []string{"kcli dm list --unread"}, []string{"V01-DM-02"})
 }
@@ -271,8 +270,7 @@ type DMGetCmd struct {
 	ConversationID string `arg:"" name:"conversation-id"`
 }
 
-func (c *DMGetCmd) Validate() error  { return validateReference(c.ConversationID, false) }
-func (*DMGetCmd) Run(*Runtime) error { return domain.NotImplemented("dm get") }
+func (c *DMGetCmd) Validate() error { return validateReference(c.ConversationID, false) }
 func (*DMGetCmd) Describe() app.OperationMeta {
 	return operation("Read available conversation history oldest first.", domain.DMGetInputV1{}, domain.DMOutputV1{}, "kcli.conversation/v1", true, app.SideEffectAccountState, false, app.EvidenceSource, 0, 0, []string{"kcli dm get 123"}, []string{"V01-DM-03", "V01-DM-07"})
 }
@@ -293,7 +291,6 @@ func (c *DMMarkReadCmd) Validate() error {
 	}
 	return nil
 }
-func (*DMMarkReadCmd) Run(*Runtime) error { return domain.NotImplemented("dm mark-read") }
 func (*DMMarkReadCmd) Describe() app.OperationMeta {
 	return operation("Preview or mark bounded conversations read.", domain.DMMarkReadInputV1{}, domain.DMOutputV1{}, "kcli.dm-mark-read/v1", true, app.SideEffectAccountState, false, app.EvidenceSource, 0, 100, []string{"kcli dm mark-read 123 --dry-run"}, []string{"V01-DM-06"})
 }

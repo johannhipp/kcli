@@ -199,7 +199,7 @@ func Execute(ctx context.Context, args []string, stdin io.Reader, stdout, stderr
 		}
 		mobile := kleinanzeigen.NewMobileTransport(kleinanzeigen.NewHTTPTransport(), installID, credentials, database)
 		deps := app.Dependencies{Transport: mobile, State: database}
-		if strings.HasPrefix(selected, "auth ") {
+		if strings.HasPrefix(selected, "auth ") || strings.HasPrefix(selected, "dm ") {
 			if store, err := secret.New("kcli"); err == nil {
 				deps.Secrets = store
 			}
@@ -254,7 +254,8 @@ func requiresRemoteState(path string) bool {
 		strings.HasPrefix(path, "search ") ||
 		strings.HasPrefix(path, "listing ") ||
 		strings.HasPrefix(path, "seller ") ||
-		strings.HasPrefix(path, "auth ")
+		strings.HasPrefix(path, "auth ") ||
+		strings.HasPrefix(path, "dm ")
 }
 func defaultFormat(stdout io.Writer) output.Format {
 	if output.IsTTY(stdout) {
