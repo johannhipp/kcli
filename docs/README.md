@@ -33,6 +33,10 @@
 - [kcli agent skill](../.agents/skills/kcli/SKILL.md) — actionable guardrails
   (dry runs, field masks, confirmation bindings, cursors, fail-closed exits)
   for driving kcli from an agent.
+- [Release blockers](release-blockers.md) — the external gates (written
+  permission, IP-block expiry, test accounts, live transport/auth evidence) and
+  the `0.1.0` release tag that still stand between this implementation and a
+  release.
 
 The endpoint reference is based on
 [`monkrel/kleinanzeigen-api` v0.4.0](https://github.com/monkrel/kleinanzeigen-api/tree/efb2d82bf449c38a49558b8c71df8d888effbfd9),
