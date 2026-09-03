@@ -1,0 +1,51 @@
+env KCLI_CONFIG_HOME=$WORK/config
+
+env KCLI_STATE_HOME=$WORK/state
+
+env KCLI_CACHE_HOME=$WORK/cache
+
+exec kcli version
+stdout '"schema": "kcli.version/v1"'
+! stderr .
+
+exec kcli schema list
+stdout '"path": "search"'
+stdout '"path": "dm reply"'
+! stderr .
+
+exec kcli schema show search
+stdout '"title": "SearchInputV1"'
+stdout '"side_effect": "none"'
+! stderr .
+
+exec kcli config list
+stdout '"source": "default"'
+! stderr .
+
+exec kcli config set output json
+stdout '"schema": "kcli.config-change/v1"'
+! stderr .
+
+exec kcli config get output
+stdout '"value": "json"'
+stdout '"source": "profile:default"'
+! stderr .
+
+exec kcli config path
+stdout 'config.json'
+! stderr .
+
+exec kcli completion bash
+stdout '^complete '
+! stderr .
+
+exec kcli doctor
+stdout '"schema": "kcli.doctor/v1"'
+stdout '"name": "state"'
+stdout '"name": "network"'
+! stderr .
+
+! exec kcli search x
+stdout '"schema": "kcli.error/v1"'
+stdout '"code": "not_implemented"'
+stderr '^search arrives in a later phase$'
