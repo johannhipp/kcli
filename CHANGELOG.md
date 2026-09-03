@@ -56,6 +56,15 @@ The first planned release is `0.1.0`. There are no tagged releases yet.
 - Reduced the v0.1 output/dependency surface to tables, JSON, NDJSON, redacted
   raw JSON, and field selection; YAML, embedded jq, PowerShell completion, and
   refresh-token environment injection are deferred.
+- Second plan review pass: replaced the OAuth/OIDC libraries with
+  standard-library PKCE, JSON token grants, and ID-token claim checks (TLS
+  back-channel validation per OIDC Core §3.1.3.7); replaced the keyring
+  fail-closed size ceiling with chunking at the real Windows limit; removed
+  `dm get --mark-read` and the public-website location fallback from v0.1;
+  specified exit codes for `resync_required`, `rate_limited_local`, and
+  `SIGTERM`; fixed the watch interval floor and monotonic cursor head; defined
+  the release-snapshot filter audit; and allowed offline phases to proceed
+  while phase-0 permission gates are pending.
 
 ### Fixed
 

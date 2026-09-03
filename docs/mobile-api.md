@@ -22,7 +22,7 @@ mutations behind explicit human approval.
 | Main API | `https://api.kleinanzeigen.de` | Search, listings, metadata, account lookup, watchlist, and own-ad operations |
 | Message gateway | `https://gateway.kleinanzeigen.de` | Conversation listing, reading, replies, and read state |
 | Login | `https://login.kleinanzeigen.de` | Auth0 Authorization Code + PKCE login and token refresh |
-| Public website fallback | `https://www.kleinanzeigen.de` | Location autocomplete fallback only; not a mobile endpoint |
+| Public website fallback | `https://www.kleinanzeigen.de` | Location autocomplete fallback used by the reference client; not a mobile endpoint and not used by kcli v0.1 |
 
 ## Transport evidence
 
@@ -175,11 +175,13 @@ Expected response fields are `access_token`, `expires_in`, optional rotated
 `refresh_token`, and optional `id_token`. The email used by the reference client
 comes from the ID token. Refresh one minute before expiry.
 
-The exact OIDC issuer, audience, discovery document, and token-endpoint client
-authentication style must be captured during the authorized login test. kcli
-must validate signature, issuer, audience, expiry, and nonce and must configure
-the observed token auth style explicitly so an auto-detection retry cannot
-repeat a state-changing code exchange.
+The exact OIDC issuer, audience, and token-endpoint request shape must be
+captured during the authorized login test. Because the ID token is received
+directly from the token endpoint over TLS, kcli validates issuer, audience,
+expiry, and nonce from its claims and relies on TLS server validation in place
+of a JWKS signature check, as OIDC Core §3.1.3.7 rule 6 permits for that case.
+kcli sends exactly one request per grant with retries disabled so a
+state-changing code exchange cannot be repeated.
 
 Store refresh tokens like passwords. The selected client defaults to
 `~/.kleinanzeigen_api/token.json`, attempts file mode `0600`, and supports
@@ -204,7 +206,9 @@ location `id`, `localized-name`, `id-name`, and nested `location` children.
 Search endpoints expect the returned numeric ID, not the display label.
 
 If this endpoint fails, the upstream client falls back to the public website
-autocomplete endpoint documented in the appendix.
+autocomplete endpoint documented in the appendix. kcli v0.1 does not: a second
+host and fingerprint after a failure is the identity-hopping its transport
+policy forbids, so a mobile location failure is reported as such.
 
 ### Fetch categories
 

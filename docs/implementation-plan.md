@@ -109,8 +109,7 @@ permission to upgrade without tests.
 | [`alecthomas/kong`](https://github.com/alecthomas/kong) | `v1.16.1` | Nested commands, flags, enums, validation, contextual help, dependency injection | One tagged struct is both command declaration and parsed value | Replace only if schema/completion integration needs a parallel command model |
 | [`jotaen/kong-completion`](https://pkg.go.dev/github.com/jotaen/kong-completion) | `v0.0.14` | Bash, zsh, and fish completion derived from Kong | Avoids three handwritten completion trees | Completion must take a fast path before config/state initialization |
 | [`bogdanfinn/tls-client`](https://github.com/bogdanfinn/tls-client) | `v1.16.0` | Fixed Chrome-like TLS, HTTP/2, and header profile for mobile API calls | Provides the compatibility layer used by the reference client without a browser process | Keep only if the phase-0 matrix proves standard Go transport is insufficient and this fixed profile is permitted and stable |
-| [`golang.org/x/oauth2`](https://pkg.go.dev/golang.org/x/oauth2) | `v0.36.0` | Authorization URL, PKCE helpers, code exchange, refresh semantics | Avoids home-grown OAuth parameter and expiry handling | Auth0 contract must pass with injected endpoints in tests |
-| [`coreos/go-oidc/v3`](https://github.com/coreos/go-oidc) | `v3.21.0` | Discovery, JWKS lookup, and ID-token issuer/audience/signature validation | Replaces unsafe manual JWT claim decoding | If the custom Auth0 domain cannot be discovered, configure the verified issuer explicitly rather than skip verification |
+| *(none for OAuth/OIDC)* | — | PKCE, the two `/oauth/token` grants, and ID-token claim checks are written against the standard library | The verified contract is one JSON `POST` per grant; `x/oauth2` sends form bodies, auto-detects auth style with a second request, and its `TokenSource` cannot persist a rotated refresh token under the lease. The ID token arrives over the TLS back channel, so OIDC Core §3.1.3.7 rule 6 permits TLS validation instead of a JWKS signature check | Re-add a library only if phase 0 shows a grant or claim shape the ~150 hand-written lines cannot express |
 | [`zalando/go-keyring`](https://github.com/zalando/go-keyring) | `v0.2.8` | macOS Keychain, Linux Secret Service, and Windows Credential Manager | One cross-platform `SecretStore` backend | Never silently fall back to plaintext tokens |
 | [`modernc.org/sqlite`](https://pkg.go.dev/modernc.org/sqlite) | `v1.58.0` | CGO-free SQLite driver | Keeps state transactional while preserving cross-compilation | Check binary size, startup time, and all six release targets in phase 1 |
 | [`pressly/goose/v3`](https://github.com/pressly/goose) | `v3.28.0` | Embedded transactional SQL migrations | Avoids a custom migration ledger and partial-upgrade logic | Use the library API only; do not ship its CLI |
@@ -170,7 +169,7 @@ The application layer receives typed inputs and returns typed results. It does
 not know whether the caller is a terminal, a JSON stdin document, or a future
 MCP tool. The CLI adapter owns argument parsing and output selection. The API
 adapter owns private wire shapes. The state package owns SQL transactions. Only
-four boundaries need interfaces for deterministic tests:
+three boundaries need interfaces for deterministic tests:
 
 - `Transport.Do(Request) (Response, error)`, using kcli-owned request/response
   types so standard `net/http` and `tls-client`/`fhttp` do not leak incompatible
@@ -213,7 +212,7 @@ internal/state/db.go                     connection pragmas and transactions
 internal/state/migrations/*.sql           embedded goose migrations
 internal/state/queries/*.sql              sqlc source
 internal/state/sqlc/*.go                  committed generated code
-internal/secret/keyring.go                keyring and env-backed implementations
+internal/secret/keyring.go                keyring implementation; build-tagged test fake
 internal/output/encoder.go                JSON/NDJSON/table/raw and --fields
 internal/schema/catalog.go                JSON schemas and live filter overlay
 internal/dmsync/poll.go                   reconciliation and event creation
@@ -374,11 +373,14 @@ discard continuity.
 ### Sensitive local data
 
 Store refresh token, access token, email, and expiry metadata as separate
-keyring entries rather than one JSON blob. Never persist the ID token. This
-keeps every Windows Credential Manager value below its per-entry blob limit;
-tests enforce a 2 KiB ceiling and fail closed if a provider value exceeds it.
-Only the refresh token is required across a restart; a missing/expired access
-token is minted under the refresh lease.
+keyring entries rather than one JSON blob. Never persist the ID token. Windows
+Credential Manager caps one credential blob at 2,560 bytes
+(`CRED_MAX_CREDENTIAL_BLOB_SIZE`); a value above that cap is split into
+numbered sibling entries and rejoined on read, so a long Auth0 JWT cannot make
+login impossible. Tests cover a synthetic 4 KiB token round-trip and a partial
+chunk set, which reads as missing rather than as a truncated token. Only the
+refresh token is required across a restart; a missing/expired access token is
+minted under the refresh lease.
 
 v0.1 deliberately does not add application-level database encryption. The
 private mode-`0600` database retains public seller snapshots, DM summary
@@ -412,13 +414,13 @@ policies, response caps, and redirect rules:
 |---|---|---|---|
 | Main API | `api.kleinanzeigen.de` | distribution Basic; optional user headers | none |
 | Gateway | `gateway.kleinanzeigen.de` | user Bearer token | none |
-| Login | `login.kleinanzeigen.de` and verified Auth0 issuer/JWKS host | OAuth client configuration; no Basic | only exact allowlisted OAuth redirects |
+| Login | `login.kleinanzeigen.de` only | OAuth client configuration; no Basic | only exact allowlisted OAuth redirects |
 | Media | exact HTTPS URLs returned by a listing, constrained to observed CDN policy | none | each hop revalidated |
 
 Login and media use standard `net/http`. Main API and gateway use standard
 `net/http` if phase 0 proves it works, otherwise the one accepted fixed
-`tls-client` profile. Phase 0 must separately prove that login/JWKS and the
-observed image CDN accept standard Go TLS; `x/oauth2` and `go-oidc` cannot be
+`tls-client` profile. Phase 0 must separately prove that the login host and
+the observed image CDN accept standard Go TLS; the OAuth code cannot be
 silently wired through `tls-client`'s incompatible `fhttp` types.
 
 Base URLs are injectable only through unexported test constructors or an
@@ -467,7 +469,8 @@ processes. Reserve a request time atomically in SQLite:
    return the prior eligible time.
 3. Commit immediately, then sleep until the reserved time.
 4. If the queue is already more than 30 seconds ahead for a one-shot command,
-   fail with a bounded local-rate error instead of silently hanging.
+   fail with `rate_limited_local` (exit `6`, `retryable: true`, `retry_after`
+   set to the queue delay) instead of silently hanging.
 
 A process that dies after reservation only creates a harmless gap. Each retry
 must obtain another reservation. `Retry-After` can move the host slot forward.
@@ -505,9 +508,10 @@ case-folded exact path, then a bounded ambiguity error listing candidates.
 
 `location resolve` calls the mobile location endpoint, flattens parent-before-
 child, and returns all candidates up to `--limit`. Cache the exact normalized
-query for seven days. The public website autocomplete is a separate, labeled
-fallback used only for a definite mobile endpoint failure; it is never silently
-mixed with mobile results.
+query for seven days. The public website autocomplete used by the reference
+client as a fallback is not part of v0.1: it is a second host with a second
+fingerprint tried after the first failed, which is exactly the identity-hopping
+the transport policy forbids. A mobile location failure is reported as such.
 
 The metadata object key is the query parameter name. Its `search-param` field is
 a capability marker such as `optional`, `required`, or `unsupported`—it is not
@@ -536,6 +540,15 @@ is not `unsupported` must be either serialized correctly or explicitly shown to
 be unusable by the service. `unsupported-client` is a safe post-release response
 to newly introduced metadata, not a way to ship with a known searchable type
 missing. This is the enforceable meaning of “all available filters.”
+
+Two different procedures satisfy it. Phase 0 samples a small category set to
+prove the wire encoding of each *kind* of filter (type × `search-style`); the
+set of kinds is small even though the set of categories is not. The release
+snapshot is then a single bounded walk over every category ID in the cached
+tree, run once at the request floor with its request count and duration
+recorded, whose only purpose is to find a kind the sample did not contain. A
+newly found kind either gets a proven serializer before release or the release
+waits; the walk never sends searches, and it is not repeated on ordinary use.
 
 ### Search
 
@@ -658,12 +671,17 @@ TTY flow:
    paste the complete redirect URL.
 4. Read it without terminal echo, validate exact scheme/host/path, compare state
    in constant time, reject OAuth errors, and extract one code.
-5. Exchange the code once with the original verifier, explicitly using
-   `oauth2.AuthStyleInParams`, `S256ChallengeOption`, and `VerifierOption` so
-   auth-style auto-detection cannot make a second request with a single-use code.
-6. Discover/verify the exact ID-token issuer (including its trailing slash),
-   signature, audience, nonce, and expiry; obtain email only from verified
-   claims. Record the observed issuer in `mobile-api.md` after the live test.
+5. Exchange the code once: one JSON `POST` to `/oauth/token` mirroring the
+   verified mobile contract, with retries disabled, so nothing can send a
+   single-use code twice.
+6. Decode the ID token's claims and require exact issuer (including its
+   trailing slash), audience equal to the client ID, unexpired `exp`, and a
+   nonce equal to the one sent. Obtain email only from those claims. No JWKS
+   fetch or signature check is performed: the token was received directly from
+   the token endpoint over TLS, which OIDC Core §3.1.3.7 rule 6 accepts in
+   place of signature validation, and the email is only used to address
+   requests that the service itself validates against the access token. Record
+   the observed issuer and audience in `mobile-api.md` after the live test.
 7. Resolve the numeric account ID through the authenticated profile endpoint.
 8. Store refresh/access/email/expiry in separate OS-keyring entries and only a
    hash/ID in SQLite. Do not persist the ID token.
@@ -677,9 +695,9 @@ Refresh 60 seconds before expiry. A SQLite lease ensures only one process uses a
 potentially rotating refresh token; contenders re-read the keyring after the
 lease holder finishes. Refresh once after a `401`, never after a `403`. On
 `invalid_grant`, mark the profile login-required and retain no usable access
-token. Implement the refresh exchange directly through the lease; do not use
-`oauth2.TokenSource`, whose implicit refresh cannot atomically persist a rotated
-token. Phase 0 records whether rotation/reuse detection is enabled.
+token. Implement the refresh exchange directly through the lease so the rotated
+token is persisted in the same step that observed it. Phase 0 records whether
+rotation/reuse detection is enabled.
 `auth status` is local by default; `--check` performs one remote check.
 
 `auth logout --dry-run` previews the local keyring and state effects. Invoking
@@ -828,7 +846,9 @@ Event IDs are deterministic for one observed upstream fact. Delivery is at
 least once at kcli's stdout boundary; it cannot prove an external consumer
 processed bytes after the OS accepted them. Consumers must deduplicate by
 `event_id`. `--no-advance` plus explicit `--after` is the robust mode for a
-consumer that owns acknowledgement.
+consumer that owns acknowledgement. The stored head is monotonic: an explicit
+`--after` older than the head replays from that point but, even with
+`--advance`, never moves the head backwards.
 
 First use requires `--since now` or a bounded RFC 3339 time. `since now` records
 a baseline without emitting historical messages. Time backfill is limited by
@@ -839,15 +859,17 @@ five-page reconciliation every 120 cycles; both remain below the global hard
 limit and become configurable only toward slower/more conservative behavior.
 
 `dm poll` runs once. `dm watch` repeats with a default 30-second interval plus
-roughly 10% jitter and rejects faster intervals. It emits NDJSON only, stays
-silent while idle unless heartbeats were requested, honors `Retry-After`, and
-caps transient backoff at 15 minutes. On `401`, it attempts the normal refresh
-once; on persistent auth failure, `403`, challenge, or cursor corruption it
-emits/returns a terminal typed error.
+roughly 10% jitter; the default is also the floor, so `--interval` can only
+slow it down. It emits NDJSON only, stays silent while idle unless heartbeats
+were requested, honors `Retry-After`, and caps transient backoff at 15 minutes.
+On `401`, it attempts the normal refresh once; on persistent auth failure,
+`403`, challenge, or cursor corruption it emits/returns a terminal typed error.
+A rejected or discontinuous cursor is `resync_required`: watch emits the
+`system.resync_required` event first, and both commands exit `2`.
 
 On SIGINT/SIGTERM, cancel the active request, finish no partial line, commit only
-complete observed batches, and exit 130 for SIGINT. Logs contain event counts
-and IDs, never message bodies.
+complete observed batches, and exit 130 for SIGINT or 143 for SIGTERM. Logs
+contain event counts and IDs, never message bodies.
 
 ### Output, help, schemas, and agent ergonomics
 
@@ -896,6 +918,17 @@ read, opens a listing in a browser, or performs multiple probing retries.
 Each phase ends in a working, reviewable, green slice. Do not stack all command
 stubs first or postpone tests until the end.
 
+Phase 0's external gates—written permission, block expiry, and two authorized
+test accounts—are waiting time, not engineering time, and they are the critical
+path. Phase 1 and the fixture-driven parts of phases 2–8 touch no network: they
+can proceed against the redacted anonymous fixtures already captured and fake
+servers while those gates are open. Three rules keep that honest: no live
+request runs before permission is recorded; no assumption stands in for a
+phase-0 measurement (a story stays incomplete until its named evidence exists);
+and transport-dependent code stays behind the kcli-owned `Transport` types so
+the phase-0 choice between standard `net/http` and the one fixed profile is a
+swap, not a rewrite. `0.1.0` cannot be tagged until phase 0's exit gate passes.
+
 ### Phase 0 — feasibility and permission gates (2–5 engineering days)
 
 Deliverables:
@@ -912,8 +945,8 @@ Deliverables:
   the block.
 - With the simplest passing fixed transport, prove categories, one location,
   one small search, one volatile detail, and a ranged image read at 2.5-second
-  spacing. Separately prove standard `net/http` against Auth0 discovery/JWKS and
-  the observed image CDN.
+  spacing. Separately prove standard `net/http` against the login host (during
+  the authorized login test below) and the observed image CDN.
 - Sample metadata from a small representative category set and capture redacted
   fixtures covering scalar, enum, boolean, numeric/range, repeated/in, and one
   unknown type if available. Prove the exact query encoding with one result
@@ -938,7 +971,7 @@ Exit gate:
   changing networks, identities, or fingerprints after a block;
 - conversation read side effects are measured and documented; list-only polling
   remains valid regardless of the result;
-- OAuth claims can be verified rather than merely decoded;
+- ID-token issuer, audience, and nonce match the values kcli sends and expects;
 - filter serialization rules are documented with fixture evidence;
 - dependency licenses and binary distribution are acceptable.
 
@@ -1015,7 +1048,8 @@ Verification:
 - Table-driven tests cover every common filter and sort.
 - Golden request tests cover every proven metadata type/style and reject unknown
   or unsupported values before network access.
-- The release-snapshot audit has no advertised searchable type/style left in
+- The release-snapshot audit (one bounded walk of the category tree, see the
+  filter metadata section) has no advertised searchable type/style left in
   `unsupported-client`.
 - Multi-page fake-server tests cover duplicate IDs, disappearing results,
   exclusions, totals that drift, empty pages, bounds, and broken pipes.
@@ -1061,9 +1095,9 @@ Deliverables:
 
 Verification:
 
-- Fake OIDC issuer/JWKS tests cover good and bad signature, issuer, audience,
-  nonce, expiry, state, redirect host/path, OAuth errors, refresh rotation,
-  `invalid_grant` reuse, per-entry size bounds, and races.
+- Fake token-endpoint tests cover bad issuer, audience, nonce, expiry, state,
+  redirect host/path, OAuth errors, refresh rotation, `invalid_grant` reuse,
+  keyring chunking bounds, and races.
 - Redaction snapshots contain no access token, refresh token, code, verifier,
   account email, Authorization value, or secret environment value.
 - Dedicated-account smoke proves login, restart, refresh, status, profile ID,
@@ -1354,7 +1388,7 @@ and contract gates still require human review.
 | Private API or app credentials change | High / release-blocking | Version contract, overrides, doctor, small adapter, no invented endpoints |
 | TLS/client fingerprint rejected | Medium-high / release-blocking | Phase-0 transport matrix; fixed profile only; stop on blocks |
 | Terms prohibit intended automation | High / release-blocking for distribution | Obtain explicit written permission covering the intended automated use before live testing or release; no scheduled live CI |
-| Auth response/issuer differs | Medium / auth-blocking | Dedicated-account spike, OIDC verification, no unsafe JWT fallback |
+| Auth response/issuer differs | Medium / auth-blocking | Dedicated-account spike; exact issuer/audience/nonce checks; no silent fallback |
 | Conversation read changes unread state | Medium / open-mode impact | Measure and label; default poll/watch remains list-only |
 | Dynamic filter encoding varies | High / partial search | Metadata proof states, fixtures by style, no guessed serialization |
 | Duplicate message after timeout | High / user harm | Plan state machine, no retry, reconciliation, exit 8 |
@@ -1461,6 +1495,53 @@ source-backed conclusion. The plan also does not invent a `KEY=MIN..MAX` range
 syntax or warning-acknowledgement behavior; both stay behind live contract
 gates. Dependency versions were independently resolved with the Go module
 proxy on the plan date before being pinned above.
+
+## Second review pass
+
+The plan set was re-read end to end on 3 September 2026 after the Fable review
+had been incorporated, this time looking for internal contradictions, hidden
+release blockers, and unspecified behavior. Adjustments made:
+
+- OAuth/OIDC libraries were removed. The verified contract is one JSON `POST`
+  per grant; `x/oauth2` sends form bodies and its auth-style auto-detection
+  could re-send a single-use code, while its `TokenSource` was already
+  bypassed for the leased refresh. `go-oidc`'s discovery and JWKS signature
+  check guarded an ID token that arrives over the TLS back channel, which OIDC
+  Core §3.1.3.7 rule 6 explicitly allows to be validated by TLS instead; the
+  email claim is only used to address requests that the service validates
+  against the access token. Issuer, audience, expiry, and nonce checks remain.
+  This also removes one host from the login client and one phase-0 unknown.
+- The 2 KiB keyring ceiling that "failed closed" would have made login
+  impossible on every platform for a long Auth0 JWT. Windows' real cap is
+  2,560 bytes per credential blob; values above it are chunked into numbered
+  entries and a partial chunk set reads as missing.
+- `dm get --mark-read` was removed. It combined a state-touching read with an
+  account mutation that had no dry run, contradicting the rule that every
+  state-changing command supports `--dry-run`; `dm mark-read` already exists.
+- The public-website location autocomplete fallback was dropped from v0.1. It
+  was a second host and fingerprint tried after the mobile endpoint failed—the
+  identity-hopping the transport policy forbids—and no scoped story needs it.
+- Unspecified behavior was fixed in the contract: `resync_required` exits `2`,
+  the local cross-process rate reservation refusing a request is
+  `rate_limited_local` under exit `6`, SIGTERM exits `143`, the watch interval
+  floor equals its 30-second default, an explicit older `--after` never rewinds
+  the stored head, and `dm poll` follows the finite-command output rules.
+- "Every searchable type/style in the release snapshot" now has a procedure:
+  phase 0 proves each filter *kind* on a sampled category set; the release
+  snapshot is one bounded, recorded walk of the cached category tree whose
+  only purpose is to detect a kind the sample missed.
+- Phase 0's external gates are identified as the critical path, and the
+  offline phases are explicitly allowed to proceed against fixtures while those
+  gates are open, without weakening any evidence requirement.
+- Text defects: the architecture named "four" interface boundaries and listed
+  three; the layout still described an env-backed secret store that v0.1 had
+  already removed.
+
+Reconsidered and left unchanged: Goose and sqlc (already gated on phase-1
+cost), the SQLite cross-process rate reservation (an in-memory limiter cannot
+see sibling CLI processes), `listing open` (harmless, and the URL opener is
+needed for login anyway), and the two-page/five-page polling bounds (explicitly
+provisional until authenticated evidence exists).
 
 ## Plan definition of done
 

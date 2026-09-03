@@ -52,7 +52,9 @@ remote side works.
 
 The remote API supplies no resume token, so the kcli cursor is local. It is only
 valid for the same account and state store. A cursor mismatch produces a clear
-resync requirement, never an empty result that looks authoritative.
+`resync_required` error (exit `2`), never an empty result that looks
+authoritative. The stored head is monotonic; replaying from an older explicit
+cursor never rewinds it.
 
 Delivery is **at least once**. Consumers deduplicate by `event_id`. Ordering is
 guaranteed within one conversation after local observation, not across all
@@ -85,13 +87,14 @@ idle streams otherwise remain silent. `dm.message.created` is available only
 when the caller explicitly enables `--open-changed`.
 
 On `SIGINT` or `SIGTERM`, watch stops after the active request, commits any fully
-observed event batch, writes no partial JSON line, and exits `130` for `SIGINT`.
+observed event batch, writes no partial JSON line, and exits `130` for `SIGINT`
+or `143` for `SIGTERM`.
 
 ## Polling policy
 
-- Start with a 30-second interval plus approximately 10% random jitter.
-- Allow a user to choose a slower interval; reject values below a conservative
-  documented floor.
+- Start with a 30-second interval plus approximately 10% random jitter. That
+  default is also the floor: `--interval` may slow polling down and rejects
+  faster values.
 - Honor `Retry-After`. For `429`, `500`, and `503`, use exponential backoff with
   jitter and a 15-minute ceiling.
 - On `401`, pause and attempt the normal token refresh once. If that fails, emit
