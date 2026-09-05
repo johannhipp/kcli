@@ -1,9 +1,14 @@
 # kcli implementation plan
 
-Status: implementation-ready plan, pending the explicit feasibility gates below
+Status: offline implementation complete and merged; release pending Phase 0 gates
 Plan date: 3 September 2026
 Target release: `0.1.0`
 Authoritative product boundary: [`v0.1-scope.md`](v0.1-scope.md)
+
+> **Current status (5 September 2026):** the offline code for phases 1–8 and
+> hardening is implemented, tested against redacted fixtures and fake servers,
+> and merged to `main`. The `0.1.0` release is still gated on the Phase 0
+> external items in [release-blockers.md](release-blockers.md).
 
 ## Outcome and feasibility
 

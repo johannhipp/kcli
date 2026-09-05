@@ -1,5 +1,9 @@
 # Project documentation
 
+> **Status:** the offline implementation is merged to `main`; the `0.1.0`
+> release is blocked on six external Phase 0 items. See
+> [release-blockers.md](release-blockers.md) for the exact done/blocked split.
+
 - [Product and technical scope](kcli-scope.md) — the full kcli boundary,
   release layering, architecture, compatibility rules, safety model, and
   agent-DX target.

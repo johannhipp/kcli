@@ -11,6 +11,11 @@ and explicitly confirmed direct messaging after login.
 > Kleinanzeigen permission covers the intended use. It is unofficial and not
 > endorsed by Kleinanzeigen.
 
+**Status:** the offline implementation (phases 1–8 + hardening) is merged to
+`main`; the `0.1.0` release is blocked on six external Phase 0 items. See
+[Release status and blockers](docs/release-blockers.md) for the exact
+done/blocked split.
+
 ## Planned `0.1.0`
 
 - Anonymous listing discovery with all filters advertised by mobile metadata.
