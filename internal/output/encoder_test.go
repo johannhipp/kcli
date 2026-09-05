@@ -21,8 +21,13 @@ func TestProjectionBeforeJSONEncoding(t *testing.T) {
 	if len(data) != 2 || data["id"] != "42" || data["title"] != "kept" {
 		t.Fatalf("unexpected projection: %#v", got)
 	}
-	if err := (Encoder{Format: FormatJSON, Fields: []string{"data.missing"}}).Encode(&bytes.Buffer{}, value); err == nil {
-		t.Fatal("unknown projection should fail")
+	// An absent optional field is tolerated (omitted), not a fatal error.
+	var allowed bytes.Buffer
+	if err := (Encoder{Format: FormatJSON, Fields: []string{"data.missing"}}).Encode(&allowed, value); err != nil {
+		t.Fatalf("absent optional field should be omitted: %v", err)
+	}
+	if got := allowed.String(); !strings.Contains(got, `"data": {}`) {
+		t.Fatalf("absent field should project to empty object, got %s", got)
 	}
 }
 func TestRawRedaction(t *testing.T) {
