@@ -135,8 +135,15 @@ func (p *Poller) Run(ctx context.Context, options PollOptions) (PollResult, erro
 		if baselineNow {
 			continue
 		}
-		if !sinceTime.IsZero() && !conversationAtOrAfter(incoming, sinceTime) {
-			continue
+		if !sinceTime.IsZero() {
+			observed, parseErr := time.Parse(time.RFC3339Nano, incoming.LastActivity)
+			if parseErr != nil {
+				warnings = append(warnings, domain.WarningV1{Code: "conversation_timestamp_unparseable", Message: "a conversation had an unparseable last-activity timestamp and was excluded from the since window"})
+				continue
+			}
+			if observed.Before(sinceTime) {
+				continue
+			}
 		}
 		if changed {
 			pending = append(pending, conversationEvents(p.AccountHash, previous, incoming, fingerprint, exists, observedAt)...)
@@ -400,11 +407,6 @@ func encodeCursor(identity state.CursorHead, sequence int64) (string, error) {
 		FormatVersion: domain.CursorFormatV1, ProfileUUID: identity.ProfileUUID,
 		AccountSubjectHash: identity.AccountHash, Generation: identity.Generation, Sequence: sequence,
 	})
-}
-
-func conversationAtOrAfter(summary state.ConversationSummary, since time.Time) bool {
-	observed, err := time.Parse(time.RFC3339Nano, summary.LastActivity)
-	return err == nil && !observed.Before(since)
 }
 
 func boundedPreview(value string) string {
