@@ -109,8 +109,15 @@ func (a *App) AuthLogin(ctx context.Context, profile, requestID string, _ domain
 }
 
 func (a *App) AuthStatus(ctx context.Context, profile, requestID string, input domain.AuthStatusInputV1) (domain.AuthOutputV1, error) {
-	if err := authDependencies(a); err != nil {
-		return domain.AuthOutputV1{}, err
+	if a == nil || a.State == nil {
+		return domain.AuthOutputV1{}, &domain.Error{Code: domain.CodeUnavailable, Message: "authentication runtime is unavailable"}
+	}
+	if a.Secrets == nil {
+		// No secret store is available (for example a headless Linux host
+		// without a keyring). A local status read should report the session as
+		// absent rather than failing, so `auth status` stays usable anywhere.
+		data := map[string]any{"status": "logged_out", "logged_in": false, "checked": false, "refreshable": false, "secret_store": "unavailable"}
+		return authOutput(a.Clock, requestID, "local", data), nil
 	}
 	session, account, exists, err := authReadLocal(a, ctx, profile)
 	if err != nil {

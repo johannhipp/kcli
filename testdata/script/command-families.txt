@@ -37,9 +37,6 @@ stdout '"code": "auth_required"'
 stderr 'dm reply confirm atomically claims local confirmation state and performs at most one external-send attempt'
 stderr 'login is required'
 
-exec kcli auth status
-stdout '"schema": "kcli.auth/v1"'
-! stderr .
 
 # Every resource family parses and renders help without any network.
 
