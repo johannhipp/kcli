@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"strings"
 
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/johannhipp/kcli/internal/app"
@@ -65,6 +66,62 @@ func (c *Catalog) Show(path string) (Document, error) {
 	}
 	return Document{Operation: describe(meta), Input: input, Output: output}, nil
 }
+
+// ValidateFields checks that each dot-separated --fields path names a real
+// output field for the operation, descending object properties and array item
+// schemas. It lets callers reject a guessed or stale path before a command runs
+// rather than after work has already been done.
+func (c *Catalog) ValidateFields(path string, fields []string) error {
+	doc, err := c.Show(path)
+	if err != nil {
+		return err
+	}
+	for _, field := range fields {
+		field = strings.TrimSpace(field)
+		if field == "" {
+			return fmt.Errorf("field paths cannot be empty")
+		}
+		if err := validateFieldPath(doc.Output, strings.Split(field, "."), field); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateFieldPath(schema *jsonschema.Schema, parts []string, full string) error {
+	if schema == nil {
+		return fmt.Errorf("field path %q is not in the output schema", full)
+	}
+	if len(parts) == 0 {
+		return nil
+	}
+	if schema.Properties != nil {
+		if child, ok := schema.Properties[parts[0]]; ok {
+			return validateFieldPath(child, parts[1:], full)
+		}
+	}
+	// The path continues into the elements of an array schema.
+	if schema.Items != nil {
+		if validateFieldPath(schema.Items, parts, full) == nil {
+			return nil
+		}
+	}
+	for _, item := range schema.ItemsArray {
+		if item != nil && validateFieldPath(item, parts, full) == nil {
+			return nil
+		}
+	}
+	for _, item := range schema.PrefixItems {
+		if item != nil && validateFieldPath(item, parts, full) == nil {
+			return nil
+		}
+	}
+	if schema.AdditionalProperties != nil {
+		return validateFieldPath(schema.AdditionalProperties, parts, full)
+	}
+	return fmt.Errorf("field path %q is not in the output schema", full)
+}
+
 func (c *Catalog) Filters(ctx context.Context, category string) (*jsonschema.Schema, error) {
 	meta, ok := c.operations.Find("search")
 	if !ok {
