@@ -11,7 +11,7 @@ intentional top-level verb because it is the product's primary action.
 
 ```text
 kcli [--profile NAME] [--output FORMAT] [--fields LIST]
-     [--no-color] [--quiet] [--debug] [--timeout DURATION]
+     [--quiet] [--debug] [--timeout DURATION]
      COMMAND
 ```
 

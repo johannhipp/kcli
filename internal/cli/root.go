@@ -27,7 +27,6 @@ type Root struct {
 	Profile string        `help:"Named profile." default:"default"`
 	Output  string        `help:"Output format: table, json, ndjson, or raw." placeholder:"FORMAT"`
 	Fields  string        `help:"Comma-separated schema field paths." placeholder:"LIST"`
-	NoColor bool          `help:"Disable color output."`
 	Quiet   bool          `help:"Suppress diagnostics, never primary output."`
 	Debug   bool          `help:"Print redacted diagnostics."`
 	Timeout time.Duration `help:"Lower the operation deadline." placeholder:"DURATION"`
