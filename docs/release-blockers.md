@@ -133,11 +133,13 @@ by-design** trade-off. Nothing here can be finished purely in-repo today.
 
 ### Coverage gaps that need a code change
 
-- **Keyring backend coverage (#20)** — the shipping `osBackend` and
-  `CheckAvailability` are untested; the test-only fake is `//go:build testing`,
-  so an untagged `go test ./...` skips the secret Store tests (by design). Full
-  coverage needs a `zalando/go-keyring` mock or a non-tagged fake that is
-  excluded from release binaries.
+- **Keyring wrapper coverage (#20)** — the credential **`Store` logic** (chunking,
+  manifest, Get/Set/Delete) **is already covered untagged** via the `memoryBackend`
+  mock in `internal/secret/keyring_test.go`. Only the thin `osBackend` wrappers
+  and `CheckAvailability` remain uncovered; they are one-line delegations to the
+  well-tested `zalando/go-keyring` library and are low-value to test (full
+  coverage would need a `go-keyring` abstraction or a non-tagged fake excluded
+  from release binaries).
 - **testscript exit-code scenarios (#19)** — full send/pagination scenarios are
   not offline-reachable because the CLI transport cannot be injected; the
   local/destructive exit-code cases are already covered.
