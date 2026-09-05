@@ -109,6 +109,9 @@ func (d *DB) ValidateCursor(ctx context.Context, accountHash string, payload dom
 	}
 	identity, err := d.CursorIdentity(ctx, accountHash)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrCursorContinuity
+		}
 		return err
 	}
 	if payload.ProfileUUID != identity.ProfileUUID || payload.Generation != identity.Generation {
@@ -305,7 +308,7 @@ func (d *DB) CommitSyncBatch(ctx context.Context, batch SyncBatch) (SyncCommit, 
 		}
 		var storedGeneration int64
 		if err := tx.QueryRowContext(ctx, `SELECT generation FROM cursor_heads WHERE account_hash=?`, batch.AccountHash).Scan(&storedGeneration); err != nil || storedGeneration != batch.Generation {
-			if err == nil {
+			if err == nil || errors.Is(err, sql.ErrNoRows) {
 				return ErrCursorContinuity
 			}
 			return err
