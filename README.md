@@ -71,6 +71,15 @@ are blocked until explicit written permission covers the intended use. Do not
 bypass access controls, change networks to evade a block, or treat a local risk
 acknowledgement as permission.
 
+> [!NOTE]
+> Everything from **Research conclusion** down to the end of this file is the
+> **historical technical investigation** (September 2026) that informed the
+> design. It is **superseded by the implemented kcli Go CLI** and retained only
+> as provenance. The `kcli` binary is the product; the Python research snippets
+> and `scripts/smoke_*.py` below are **research-only** — do not use them for
+> live testing without written permission, and do not treat them as part of the
+> build.
+
 ## Research conclusion
 
 Research snapshot: 2 September 2026; implementation plan updated 3 September
