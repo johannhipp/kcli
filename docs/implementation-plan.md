@@ -137,15 +137,13 @@ operation.
 
 | Tool/library | Candidate pin | Role |
 |---|---:|---|
-| [`sqlc`](https://docs.sqlc.dev/en/latest/tutorials/getting-started-sqlite.html) | `v1.31.1` | Generate typed SQLite query methods from reviewed SQL |
 | [`rogpeppe/go-internal/testscript`](https://github.com/rogpeppe/go-internal/tree/master/testscript) | `v1.16.0` | Exercise the compiled CLI, streams, files, exit codes, and environment in txtar fixtures |
 | [`google/go-cmp`](https://github.com/google/go-cmp) | `v0.7.0` | Readable structural diffs in parser and normalization tests |
 | [`GoReleaser`](https://goreleaser.com/) | pin in CI | Reproducible archives, checksums, SBOMs, Homebrew metadata, and release snapshots |
 | [`govulncheck`](https://go.dev/security/vuln/) | pin in CI | Reachability-aware Go vulnerability scanning |
 | `staticcheck` | pin in CI | Static analysis beyond `go vet` |
 
-Generated sqlc files are committed so source releases build without installing
-sqlc. CI regenerates them and fails on a diff. Do not introduce Viper, a DI
+SQLite queries use hand-written typed methods in `internal/state/store.go`; there is no SQL code generator (the account, cursor, confirmation, and reconciliation queries are domain-shaped and reference SQLite internals a generator cannot resolve). Do not introduce Viper, a DI
 container, an ORM, a logging framework, an HTTP framework, or a second schema
 library unless a measured requirement appears.
 
@@ -215,8 +213,7 @@ internal/kleinanzeigen/auth.go
 internal/kleinanzeigen/messages.go
 internal/state/db.go                     connection pragmas and transactions
 internal/state/migrations/*.sql           embedded goose migrations
-internal/state/queries/*.sql              sqlc source
-internal/state/sqlc/*.go                  committed generated code
+internal/state/store.go                   hand-written typed query layer and DBTX
 internal/secret/keyring.go                keyring implementation; build-tagged test fake
 internal/output/encoder.go                JSON/NDJSON/table/raw and --fields
 internal/schema/catalog.go                JSON schemas and live filter overlay
@@ -230,7 +227,6 @@ testdata/api/*.json                       minimized redacted wire fixtures
 testdata/script/*.txtar                    end-to-end CLI scenarios
 docs/                                    contracts and this plan
 scripts/check_docs.py                     documentation traceability
-sqlc.yaml
 .goreleaser.yaml
 go.mod
 go.sum
@@ -995,8 +991,8 @@ Deliverables:
 - Initialize module, main package, build info, Kong root, context cancellation,
   and typed exit mapping.
 - Implement profile/path/config loading and atomic writes.
-- Open per-profile SQLite, embed/run first goose migration, generate sqlc code,
-  and test corruption behavior.
+- Open per-profile SQLite, embed/run first goose migration, hand-write the typed
+  query layer, and test corruption behavior.
 - Implement split-entry keyring storage and the build-tagged test-only secret
   backend.
 - Implement JSON/NDJSON/table/error encoders, TTY selection, field masks, and
@@ -1193,7 +1189,7 @@ Verification:
 
 - All commands pass Linux/macOS/Windows smoke; amd64/arm64 artifacts build.
 - `go test -race ./...`, fuzz seed corpus, `go vet`, staticcheck, govulncheck,
-  `go mod verify`, sqlc regeneration, docs checks, and GoReleaser snapshot pass.
+  `go mod verify`, docs checks, and GoReleaser snapshot pass.
 - Manual anonymous and dedicated-account acceptance runs cover every scoped
   story exactly once at conservative volume.
 - No deferred command is reachable; docs/changelog/version agree; the release
@@ -1364,8 +1360,8 @@ automatic reaction to a `403`.
 
 ## Code-size and complexity budget
 
-Target at most roughly 7,500 hand-written non-test Go lines for v0.1, excluding
-generated sqlc code. Treat this as a pressure against unnecessary frameworks,
+Target at most roughly 7,500 hand-written non-test Go lines for v0.1 (the hand-written
+query layer counts toward this). Treat this as a pressure against unnecessary frameworks,
 not as a reason to omit safety tests. Expected distribution:
 
 | Area | Approximate hand-written Go |
@@ -1542,7 +1538,7 @@ release blockers, and unspecified behavior. Adjustments made:
   three; the layout still described an env-backed secret store that v0.1 had
   already removed.
 
-Reconsidered and left unchanged: Goose and sqlc (already gated on phase-1
+Reconsidered and left unchanged: Goose (already gated on phase-1
 cost), the SQLite cross-process rate reservation (an in-memory limiter cannot
 see sibling CLI processes), `listing open` (harmless, and the URL opener is
 needed for login anyway), and the two-page/five-page polling bounds (explicitly

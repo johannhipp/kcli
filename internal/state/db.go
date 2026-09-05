@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/johannhipp/kcli/internal/platform"
-	generated "github.com/johannhipp/kcli/internal/state/sqlc"
 	"github.com/pressly/goose/v3"
 	_ "modernc.org/sqlite"
 )
@@ -26,7 +25,7 @@ var migrationFiles embed.FS
 
 type DB struct {
 	sql     *sql.DB
-	queries *generated.Queries
+	queries *Queries
 }
 
 func Open(ctx context.Context, path string) (*DB, error) {
@@ -48,7 +47,7 @@ func Open(ctx context.Context, path string) (*DB, error) {
 		sqldb.Close()
 		return nil, fmt.Errorf("open state database: %w", err)
 	}
-	db := &DB{sql: sqldb, queries: generated.New(sqldb)}
+	db := &DB{sql: sqldb, queries: NewQueries(sqldb)}
 	if err := db.migrate(ctx); err != nil {
 		sqldb.Close()
 		return nil, err
@@ -114,11 +113,11 @@ func newUUID() (string, error) {
 	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16]), nil
 }
 
-func (d *DB) Close() error                { return d.sql.Close() }
-func (d *DB) SQL() *sql.DB                { return d.sql }
-func (d *DB) Queries() *generated.Queries { return d.queries }
+func (d *DB) Close() error      { return d.sql.Close() }
+func (d *DB) SQL() *sql.DB      { return d.sql }
+func (d *DB) Queries() *Queries { return d.queries }
 
-func (d *DB) WithTx(ctx context.Context, fn func(*sql.Tx, *generated.Queries) error) error {
+func (d *DB) WithTx(ctx context.Context, fn func(*sql.Tx, *Queries) error) error {
 	tx, err := d.sql.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
 		return err
@@ -143,7 +142,7 @@ func (d *DB) AcquireLease(ctx context.Context, name, owner string, ttl time.Dura
 	now := time.Now().UnixMilli()
 	expires := now + ttl.Milliseconds()
 	var acquired bool
-	err := d.WithTx(ctx, func(tx *sql.Tx, _ *generated.Queries) error {
+	err := d.WithTx(ctx, func(tx *sql.Tx, _ *Queries) error {
 		result, err := tx.ExecContext(ctx, `INSERT INTO leases(name, owner, expires_at_ms) VALUES(?, ?, ?) ON CONFLICT(name) DO UPDATE SET owner=excluded.owner, expires_at_ms=excluded.expires_at_ms WHERE leases.expires_at_ms <= ? OR leases.owner = ?`, name, owner, expires, now, owner)
 		if err != nil {
 			return err

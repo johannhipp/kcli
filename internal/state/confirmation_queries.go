@@ -10,8 +10,6 @@ import (
 	"regexp"
 	"strings"
 	"time"
-
-	generated "github.com/johannhipp/kcli/internal/state/sqlc"
 )
 
 const (
@@ -150,7 +148,7 @@ func (d *DB) ClaimPlan(ctx context.Context, input ClaimPlanInput) (ConfirmationP
 	}
 	var claimed ConfirmationPlan
 	var claimErr error
-	err := d.WithTx(ctx, func(tx *sql.Tx, _ *generated.Queries) error {
+	err := d.WithTx(ctx, func(tx *sql.Tx, _ *Queries) error {
 		plan, err := scanConfirmationPlan(tx.QueryRowContext(ctx, `SELECT
 			confirmation_id, profile_uuid, account_hash, operation_kind, target_id,
 			message_digest, state, stage, created_at, expires_at, outcome

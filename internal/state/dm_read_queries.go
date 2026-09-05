@@ -12,8 +12,6 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
-
-	generated "github.com/johannhipp/kcli/internal/state/sqlc"
 )
 
 const messageFingerprintVersion = "kcli-message-fingerprint/v1"
@@ -122,7 +120,7 @@ func (d *DB) UpsertConversationSummary(ctx context.Context, incoming Conversatio
 		return ConversationSummary{}, err
 	}
 	var merged ConversationSummary
-	err := d.WithTx(ctx, func(tx *sql.Tx, _ *generated.Queries) error {
+	err := d.WithTx(ctx, func(tx *sql.Tx, _ *Queries) error {
 		previous, exists, err := conversationSummaryFrom(ctx, tx, incoming.AccountHash, incoming.ConversationID)
 		if err != nil {
 			return err
@@ -210,7 +208,7 @@ func (d *DB) UpsertMessageFingerprints(ctx context.Context, messages []MessageFi
 	if len(messages) > 10000 {
 		return fmt.Errorf("too many message fingerprints")
 	}
-	return d.WithTx(ctx, func(tx *sql.Tx, _ *generated.Queries) error {
+	return d.WithTx(ctx, func(tx *sql.Tx, _ *Queries) error {
 		for _, message := range messages {
 			if err := validateMessageFingerprint(message); err != nil {
 				return err
@@ -246,7 +244,7 @@ func (d *DB) MarkConversationSummariesRead(ctx context.Context, accountHash stri
 	if d == nil || d.sql == nil || !authAccountHashPattern.MatchString(accountHash) || len(conversationIDs) == 0 || len(conversationIDs) > 100 || observedAt.IsZero() {
 		return fmt.Errorf("invalid local mark-read update")
 	}
-	return d.WithTx(ctx, func(tx *sql.Tx, _ *generated.Queries) error {
+	return d.WithTx(ctx, func(tx *sql.Tx, _ *Queries) error {
 		for _, id := range conversationIDs {
 			summary, exists, err := conversationSummaryFrom(ctx, tx, accountHash, id)
 			if err != nil {
