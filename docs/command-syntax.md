@@ -1,6 +1,6 @@
-# Proposed kcli command syntax
+# kcli command syntax
 
-Status: naming proposal for user review
+Status: implemented (offline); automated live testing and the `0.1.0` release remain gated
 Current release: commands marked **v0.1**
 
 This document fixes command names and argument shapes before implementation.
