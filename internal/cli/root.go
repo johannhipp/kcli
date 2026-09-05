@@ -124,7 +124,7 @@ type exitPanic int
 
 func Execute(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) (code int) {
 	root := &Root{}
-	parser, err := kong.New(root, kong.Name("kcli"), kong.Description("Agent-friendly Kleinanzeigen CLI."), kong.Writers(stdout, stderr), kong.Exit(func(code int) { panic(exitPanic(code)) }))
+	parser, err := kong.New(root, kong.Name("kcli"), kong.Description("Agent-friendly Kleinanzeigen CLI."), kong.Writers(stdout, stderr), kong.Exit(func(code int) { panic(exitPanic(code)) }), kong.Help(examplesHelpPrinter))
 	if err != nil {
 		_, _ = fmt.Fprintln(stderr, err)
 		return 1
