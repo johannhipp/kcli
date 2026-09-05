@@ -278,11 +278,18 @@ func (*DMGetCmd) Describe() app.OperationMeta {
 }
 
 type DMMarkReadCmd struct {
-	ConversationIDs []string `arg:"" name:"conversation-id" help:"One or more conversation IDs to mark read."`
+	ConversationIDs []string `arg:"" optional:"" name:"conversation-id" help:"One or more conversation IDs to mark read."`
+	Input           string   `type:"path" help:"Versioned JSON input file or - with conversation_ids."`
 	DryRun          bool     `name:"dry-run" help:"Preview mark-read without changing account state."`
 }
 
 func (c *DMMarkReadCmd) Validate() error {
+	if c.Input != "" {
+		if len(c.ConversationIDs) > 0 {
+			return fmt.Errorf("provide conversation IDs either positionally or via --input, not both")
+		}
+		return nil
+	}
 	if len(c.ConversationIDs) == 0 || len(c.ConversationIDs) > 100 {
 		return fmt.Errorf("provide between 1 and 100 conversation IDs")
 	}

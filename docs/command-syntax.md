@@ -125,7 +125,7 @@ token-family behavior are verified.
 kcli dm list [--unread] [--page NUMBER] [--page-size NUMBER]
   [--paginate] [--limit NUMBER]
 kcli dm get CONVERSATION_ID
-kcli dm mark-read CONVERSATION_ID... [--dry-run]
+kcli dm mark-read CONVERSATION_ID... [--input FILE|-] [--dry-run]
 
 kcli dm poll [--after CURSOR | --since TIME_OR_NOW]
   [--limit NUMBER] [--advance | --no-advance] [--open-changed]
