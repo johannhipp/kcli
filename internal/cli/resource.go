@@ -226,8 +226,8 @@ func (*SellerListingsCmd) Describe() app.OperationMeta {
 }
 
 type AuthLoginCmd struct {
-	NoOpen       bool   `name:"no-open"`
-	RedirectFile string `name:"redirect-file" type:"path"`
+	NoOpen       bool   `name:"no-open" help:"Do not open the browser; require --redirect-file."`
+	RedirectFile string `name:"redirect-file" type:"path" help:"Read the callback redirect URL from a file, or - for stdin."`
 }
 
 func (*AuthLoginCmd) Describe() app.OperationMeta {
@@ -241,7 +241,7 @@ func (*AuthStatusCmd) Describe() app.OperationMeta {
 }
 
 type AuthLogoutCmd struct {
-	DryRun bool `name:"dry-run"`
+	DryRun bool `name:"dry-run" help:"Preview local session effects without clearing them."`
 }
 
 func (*AuthLogoutCmd) Describe() app.OperationMeta {
@@ -249,11 +249,11 @@ func (*AuthLogoutCmd) Describe() app.OperationMeta {
 }
 
 type DMListCmd struct {
-	Unread   bool
-	Page     int `default:"0"`
-	PageSize int `name:"page-size" default:"50"`
-	Paginate bool
-	Limit    int `default:"50"`
+	Unread   bool `help:"Only conversations with unread messages."`
+	Page     int  `default:"0" help:"Zero-based page number."`
+	PageSize int  `name:"page-size" default:"50" help:"Conversations per page (default: 50)."`
+	Paginate bool `help:"Fetch pages up to the result bound."`
+	Limit    int  `default:"50" help:"Maximum conversations (default: 50)."`
 }
 
 func (c *DMListCmd) Validate() error {
@@ -267,7 +267,7 @@ func (*DMListCmd) Describe() app.OperationMeta {
 }
 
 type DMGetCmd struct {
-	ConversationID string `arg:"" name:"conversation-id"`
+	ConversationID string `arg:"" name:"conversation-id" help:"Conversation to read."`
 }
 
 func (c *DMGetCmd) Validate() error { return validateReference(c.ConversationID, false) }
@@ -276,8 +276,8 @@ func (*DMGetCmd) Describe() app.OperationMeta {
 }
 
 type DMMarkReadCmd struct {
-	ConversationIDs []string `arg:"" name:"conversation-id"`
-	DryRun          bool     `name:"dry-run"`
+	ConversationIDs []string `arg:"" name:"conversation-id" help:"One or more conversation IDs to mark read."`
+	DryRun          bool     `name:"dry-run" help:"Preview mark-read without changing account state."`
 }
 
 func (c *DMMarkReadCmd) Validate() error {
@@ -296,12 +296,12 @@ func (*DMMarkReadCmd) Describe() app.OperationMeta {
 }
 
 type DMPollCmd struct {
-	After       string
-	Since       string
-	Limit       int `default:"200"`
-	Advance     bool
-	NoAdvance   bool `name:"no-advance"`
-	OpenChanged bool `name:"open-changed"`
+	After       string `help:"Resume after this cursor."`
+	Since       string `help:"Baseline time (RFC 3339) or now."`
+	Limit       int    `default:"200" help:"Conversations to scan this cycle (default: 200)."`
+	Advance     bool   `help:"Advance the stored cursor after a successful cycle."`
+	NoAdvance   bool   `name:"no-advance" help:"Never advance the stored cursor."`
+	OpenChanged bool   `name:"open-changed" help:"Open changed threads (state-touching) to identify message events."`
 }
 
 func (c *DMPollCmd) Validate() error {
@@ -321,12 +321,12 @@ func (*DMPollCmd) Describe() app.OperationMeta {
 }
 
 type DMWatchCmd struct {
-	After             string
-	Since             string
-	Interval          time.Duration `default:"30s"`
-	Limit             int           `default:"200"`
-	IncludeHeartbeats bool          `name:"include-heartbeats"`
-	OpenChanged       bool          `name:"open-changed"`
+	After             string        `help:"Resume after this cursor."`
+	Since             string        `help:"Baseline time (RFC 3339) or now."`
+	Interval          time.Duration `default:"30s" help:"Sync interval (minimum 30s)."`
+	Limit             int           `default:"200" help:"Conversations to scan per cycle (default: 200)."`
+	IncludeHeartbeats bool          `name:"include-heartbeats" help:"Emit a heartbeat when the stream is idle."`
+	OpenChanged       bool          `name:"open-changed" help:"Open changed threads (state-touching) to identify message events."`
 }
 
 func (c *DMWatchCmd) Validate() error {
@@ -346,14 +346,14 @@ func (*DMWatchCmd) Describe() app.OperationMeta {
 }
 
 type DMReplyCmd struct {
-	ConversationID               string `arg:"" name:"conversation-id"`
-	Message                      string
-	MessageFile                  string `name:"message-file" type:"path"`
-	Input                        string `type:"path"`
-	DryRun                       bool   `name:"dry-run"`
-	Confirm                      string
-	AcknowledgeWarning           string `name:"acknowledge-warning"`
-	AcknowledgePossibleDuplicate string `name:"acknowledge-possible-duplicate"`
+	ConversationID               string `arg:"" name:"conversation-id" help:"Conversation to reply in."`
+	Message                      string `help:"Message text."`
+	MessageFile                  string `name:"message-file" type:"path" help:"Read message text from a file, or - for stdin."`
+	Input                        string `type:"path" help:"Versioned JSON operation input file or -."`
+	DryRun                       bool   `name:"dry-run" help:"Preview the reply plan without sending."`
+	Confirm                      string `help:"Confirmation id from a matching dry run."`
+	AcknowledgeWarning           string `name:"acknowledge-warning" help:"Acknowledge a platform warning code."`
+	AcknowledgePossibleDuplicate string `name:"acknowledge-possible-duplicate" help:"Acknowledge an ambiguous prior send by its confirmation id."`
 }
 
 func (c *DMReplyCmd) Validate() error {
@@ -367,15 +367,15 @@ func (*DMReplyCmd) Describe() app.OperationMeta {
 }
 
 type DMStartCmd struct {
-	ListingIDOrURL               string `arg:"" name:"listing-id-or-url"`
-	Message                      string
-	MessageFile                  string `name:"message-file" type:"path"`
-	Input                        string `type:"path"`
-	ContactName                  string `name:"contact-name"`
-	DryRun                       bool   `name:"dry-run"`
-	Confirm                      string
-	AcknowledgeWarning           string `name:"acknowledge-warning"`
-	AcknowledgePossibleDuplicate string `name:"acknowledge-possible-duplicate"`
+	ListingIDOrURL               string `arg:"" name:"listing-id-or-url" help:"Listing ID or public URL to contact."`
+	Message                      string `help:"First message text."`
+	MessageFile                  string `name:"message-file" type:"path" help:"Read message text from a file, or - for stdin."`
+	Input                        string `type:"path" help:"Versioned JSON operation input file or -."`
+	ContactName                  string `name:"contact-name" help:"Exact contact name sent with the first message."`
+	DryRun                       bool   `name:"dry-run" help:"Preview the first-contact plan without sending."`
+	Confirm                      string `help:"Confirmation id from a matching dry run."`
+	AcknowledgeWarning           string `name:"acknowledge-warning" help:"Acknowledge a platform warning code."`
+	AcknowledgePossibleDuplicate string `name:"acknowledge-possible-duplicate" help:"Acknowledge an ambiguous prior send by its confirmation id."`
 }
 
 func (c *DMStartCmd) Validate() error {
