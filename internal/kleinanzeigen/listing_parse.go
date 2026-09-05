@@ -20,7 +20,7 @@ func ListingFetch(ctx context.Context, transport Transport, reference string) (L
 	if err != nil {
 		return ListingDetail{}, err
 	}
-	response, err := transport.Do(Request{Context: ctx, Host: HostMain, Method: http.MethodGet, Path: "/api/ads/" + id + ".json", MaxResponseBytes: JSONResponseLimit, Class: VolatileRead})
+	response, err := transport.Do(getJSONRequest(ctx, "/api/ads/"+id+".json", nil, VolatileRead, false))
 	if err != nil {
 		return ListingDetail{}, err
 	}

@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"sort"
 	"strings"
 	"time"
@@ -232,7 +231,7 @@ func (s *MetadataService) Filter(ctx context.Context, categoryReference, key str
 func (s *MetadataService) fetch(ctx context.Context, path string, query map[string][]string) ([]byte, error) {
 	requestContext, cancel := context.WithTimeout(ctx, 25*time.Second)
 	defer cancel()
-	response, err := s.transport.Do(Request{Context: requestContext, Host: HostMain, Method: http.MethodGet, Path: path, Query: query, Class: StableRead, OneShot: true, MaxResponseBytes: JSONResponseLimit})
+	response, err := s.transport.Do(getJSONRequest(requestContext, path, query, StableRead, true))
 	if err != nil {
 		return nil, err
 	}
