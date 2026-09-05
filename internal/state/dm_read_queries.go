@@ -12,8 +12,6 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
-
-	generated "github.com/johannhipp/kcli/internal/state/sqlc"
 )
 
 const messageFingerprintVersion = "kcli-message-fingerprint/v1"
@@ -122,7 +120,7 @@ func (d *DB) UpsertConversationSummary(ctx context.Context, incoming Conversatio
 		return ConversationSummary{}, err
 	}
 	var merged ConversationSummary
-	err := d.WithTx(ctx, func(tx *sql.Tx, _ *generated.Queries) error {
+	err := d.WithTx(ctx, func(tx *sql.Tx, _ *Queries) error {
 		previous, exists, err := conversationSummaryFrom(ctx, tx, incoming.AccountHash, incoming.ConversationID)
 		if err != nil {
 			return err
@@ -185,20 +183,54 @@ func (d *DB) ConversationSummary(ctx context.Context, accountHash, conversationI
 	return summary, nil
 }
 
+// ConversationSummaries returns the stored summary for each of the given
+// conversation IDs belonging to account, in a real batched read (chunked IN
+// query) so lookups are not O(conversations) individual SELECTs. IDs without a
+// stored row are omitted.
 func (d *DB) ConversationSummaries(ctx context.Context, accountHash string, conversationIDs []string) ([]ConversationSummary, error) {
-	if !authAccountHashPattern.MatchString(accountHash) || len(conversationIDs) == 0 || len(conversationIDs) > 100 {
+	if !authAccountHashPattern.MatchString(accountHash) || len(conversationIDs) > 1000 {
 		return nil, fmt.Errorf("invalid conversation lookup")
 	}
 	result := make([]ConversationSummary, 0, len(conversationIDs))
-	for _, id := range conversationIDs {
-		summary, err := d.ConversationSummary(ctx, accountHash, id)
-		if err == sql.ErrNoRows {
-			continue
+	if len(conversationIDs) == 0 {
+		return result, nil
+	}
+	const chunkSize = 200
+	for start := 0; start < len(conversationIDs); start += chunkSize {
+		end := start + chunkSize
+		if end > len(conversationIDs) {
+			end = len(conversationIDs)
 		}
+		chunk := conversationIDs[start:end]
+		placeholders := strings.TrimRight(strings.Repeat("?,", len(chunk)), ",")
+		args := make([]any, 0, len(chunk)+1)
+		args = append(args, accountHash)
+		for _, id := range chunk {
+			args = append(args, id)
+		}
+		rows, err := d.sql.QueryContext(ctx, `SELECT conversation_id, listing_id, counterparty, summary_json, remote_fingerprint, remote_updated_at, observed_at FROM conversations WHERE account_hash=? AND conversation_id IN (`+placeholders+`)`, args...)
 		if err != nil {
 			return nil, err
 		}
-		result = append(result, summary)
+		for rows.Next() {
+			var id string
+			var listingID, counterparty, remoteUpdated sql.NullString
+			var summaryJSON []byte
+			var fingerprint, observedRaw string
+			if err := rows.Scan(&id, &listingID, &counterparty, &summaryJSON, &fingerprint, &remoteUpdated, &observedRaw); err != nil {
+				rows.Close()
+				return nil, err
+			}
+			if summary, ok, decodeErr := summaryFromStored(accountHash, id, listingID, counterparty, summaryJSON, fingerprint, remoteUpdated, observedRaw); decodeErr != nil {
+				rows.Close()
+				return nil, decodeErr
+			} else if ok {
+				result = append(result, summary)
+			}
+		}
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
 	}
 	return result, nil
 }
@@ -210,7 +242,7 @@ func (d *DB) UpsertMessageFingerprints(ctx context.Context, messages []MessageFi
 	if len(messages) > 10000 {
 		return fmt.Errorf("too many message fingerprints")
 	}
-	return d.WithTx(ctx, func(tx *sql.Tx, _ *generated.Queries) error {
+	return d.WithTx(ctx, func(tx *sql.Tx, _ *Queries) error {
 		for _, message := range messages {
 			if err := validateMessageFingerprint(message); err != nil {
 				return err
@@ -246,7 +278,7 @@ func (d *DB) MarkConversationSummariesRead(ctx context.Context, accountHash stri
 	if d == nil || d.sql == nil || !authAccountHashPattern.MatchString(accountHash) || len(conversationIDs) == 0 || len(conversationIDs) > 100 || observedAt.IsZero() {
 		return fmt.Errorf("invalid local mark-read update")
 	}
-	return d.WithTx(ctx, func(tx *sql.Tx, _ *generated.Queries) error {
+	return d.WithTx(ctx, func(tx *sql.Tx, _ *Queries) error {
 		for _, id := range conversationIDs {
 			summary, exists, err := conversationSummaryFrom(ctx, tx, accountHash, id)
 			if err != nil {
@@ -298,6 +330,13 @@ func conversationSummaryFrom(ctx context.Context, queryer dmQueryer, accountHash
 	if err != nil {
 		return ConversationSummary{}, false, err
 	}
+	return summaryFromStored(accountHash, conversationID, listingID, counterparty, summaryJSON, fingerprint, remoteUpdated, observedRaw)
+}
+
+// summaryFromStored decodes a stored conversations row into a summary. It is
+// shared by the per-ID lookup and the batched sync load so row decoding lives
+// in one place.
+func summaryFromStored(accountHash, conversationID string, listingID, counterparty sql.NullString, summaryJSON []byte, fingerprint string, remoteUpdated sql.NullString, observedRaw string) (ConversationSummary, bool, error) {
 	var stored storedConversationSummary
 	if err := json.Unmarshal(summaryJSON, &stored); err != nil {
 		return ConversationSummary{}, false, fmt.Errorf("decode conversation summary: %w", err)

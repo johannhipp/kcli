@@ -266,7 +266,9 @@ func projectNode(value any, tree map[string]any, prefix string) (any, error) {
 		for key, child := range tree {
 			found, ok := current[key]
 			if !ok {
-				return nil, fmt.Errorf("unknown field path %q", strings.TrimPrefix(prefix+"."+key, "."))
+				// The field is legitimately absent in this record (e.g. an
+				// omitempty optional). Omit it rather than fail the whole output.
+				continue
 			}
 			if childTree, ok := child.(map[string]any); ok {
 				projected, err := projectNode(found, childTree, prefix+"."+key)

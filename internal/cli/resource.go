@@ -21,15 +21,15 @@ type SearchCmd struct {
 	MinPrice        string   `name:"min-price" help:"Exact minimum euro amount."`
 	MaxPrice        string   `name:"max-price" help:"Exact maximum euro amount."`
 	AdType          *string  `name:"ad-type" enum:"offered,wanted" help:"Ad type (default: offered)."`
-	PictureRequired bool     `name:"picture-required"`
+	PictureRequired bool     `name:"picture-required" help:"Require at least one picture."`
 	Sort            *string  `enum:"date-desc,price-asc,price-desc,distance-asc" help:"Sort mode (default: date-desc)."`
 	Filter          []string `help:"Dynamic KEY=VALUE filter."`
 	Exclude         []string `help:"Exclude matching title or description text."`
-	Page            *int
-	PageSize        *int `name:"page-size" help:"Results per page (default: 25)."`
-	Paginate        bool
-	Limit           *int
-	Input           string `type:"path" help:"Versioned JSON input file or -."`
+	Page            *int     `help:"Zero-based page number."`
+	PageSize        *int     `name:"page-size" help:"Results per page (default: 25)."`
+	Paginate        bool     `help:"Fetch pages up to the result bound."`
+	Limit           *int     `help:"Maximum results (default: 100 when paginating)."`
+	Input           string   `type:"path" help:"Versioned JSON input file or -."`
 }
 
 func (c *SearchCmd) Validate() error {
@@ -71,14 +71,16 @@ func (c *SearchCmd) Describe() app.OperationMeta {
 	return operation("Search listings with a reproducible bounded specification.", domain.SearchInputV1{}, domain.SearchOutputV1{}, "kcli.search-results/v1", false, app.SideEffectNone, false, app.EvidenceLive, 25, 1000, []string{"kcli search thinkpad --limit 25"}, []string{"V01-SEARCH-01", "V01-SEARCH-03", "V01-SEARCH-04", "V01-SEARCH-05", "V01-SEARCH-06", "V01-SEARCH-07", "V01-SEARCH-08", "V01-SEARCH-09", "V01-SEARCH-10"})
 }
 
-type CategoryListCmd struct{ Refresh bool }
+type CategoryListCmd struct {
+	Refresh bool `help:"Refresh the tree from the server, ignoring the cache."`
+}
 
 func (*CategoryListCmd) Describe() app.OperationMeta {
 	return operation("List the cached or refreshed category tree.", domain.CategoryListInputV1{}, domain.CategoryListOutputV1{}, "kcli.categories/v1", false, app.SideEffectLocal, false, app.EvidenceLive, 0, 0, []string{"kcli category list"}, []string{"V01-SEARCH-02"})
 }
 
 type CategoryGetCmd struct {
-	IDOrPath string `arg:"" name:"id-or-path"`
+	IDOrPath string `arg:"" name:"id-or-path" help:"Category ID or slash-separated path."`
 }
 
 func (c *CategoryGetCmd) Validate() error { return validateReference(c.IDOrPath, true) }
@@ -87,7 +89,7 @@ func (*CategoryGetCmd) Describe() app.OperationMeta {
 }
 
 type CategorySearchCmd struct {
-	Text string `arg:""`
+	Text string `arg:"" help:"Search text."`
 }
 
 func (c *CategorySearchCmd) Validate() error { return validateText(c.Text, 256, "category text") }
@@ -96,8 +98,8 @@ func (*CategorySearchCmd) Describe() app.OperationMeta {
 }
 
 type LocationResolveCmd struct {
-	Text  string `arg:""`
-	Limit int    `default:"10"`
+	Text  string `arg:"" help:"Place name or postcode."`
+	Limit int    `default:"10" help:"Maximum candidates (default: 10)."`
 }
 
 func (c *LocationResolveCmd) Validate() error {
@@ -114,8 +116,8 @@ func (*LocationResolveCmd) Describe() app.OperationMeta {
 }
 
 type FilterListCmd struct {
-	Category string `required:""`
-	Refresh  bool
+	Category string `required:"" help:"Category ID or path."`
+	Refresh  bool   `help:"Refresh metadata from the server, ignoring the cache."`
 }
 
 func (c *FilterListCmd) Validate() error { return validateReference(c.Category, true) }
@@ -124,8 +126,8 @@ func (*FilterListCmd) Describe() app.OperationMeta {
 }
 
 type FilterGetCmd struct {
-	Category string `required:""`
-	Key      string `arg:""`
+	Category string `required:"" help:"Category ID or path."`
+	Key      string `arg:"" help:"Filter metadata key."`
 }
 
 func (c *FilterGetCmd) Validate() error {
@@ -139,8 +141,8 @@ func (*FilterGetCmd) Describe() app.OperationMeta {
 }
 
 type ListingGetCmd struct {
-	IDOrURL string `arg:"" name:"id-or-url"`
-	Raw     bool
+	IDOrURL string `arg:"" name:"id-or-url" help:"Listing ID or public URL."`
+	Raw     bool   `help:"Include the redacted raw response."`
 }
 
 func (c *ListingGetCmd) Validate() error { return validateListingReference(c.IDOrURL) }
@@ -149,12 +151,12 @@ func (*ListingGetCmd) Describe() app.OperationMeta {
 }
 
 type ListingImagesCmd struct {
-	IDOrURL         string `arg:"" name:"id-or-url"`
-	Download        string
-	OutputDir       string `name:"output-dir" type:"path"`
-	AllowOutsideCWD string `name:"allow-outside-cwd" type:"path"`
-	MaxBytes        int64  `name:"max-bytes" default:"26214400"`
-	Overwrite       bool
+	IDOrURL         string `arg:"" name:"id-or-url" help:"Listing ID or public URL."`
+	Download        string `help:"Download selector: index, relation, or all."`
+	OutputDir       string `name:"output-dir" type:"path" help:"Destination directory (default ./kcli-downloads)."`
+	AllowOutsideCWD string `name:"allow-outside-cwd" type:"path" help:"Exact absolute path permitted outside the working directory."`
+	MaxBytes        int64  `name:"max-bytes" default:"26214400" help:"Maximum bytes per image (default 26214400)."`
+	Overwrite       bool   `help:"Overwrite an existing destination file."`
 }
 
 func (c *ListingImagesCmd) Validate() error {
@@ -171,7 +173,7 @@ func (*ListingImagesCmd) Describe() app.OperationMeta {
 }
 
 type ListingOpenCmd struct {
-	IDOrURL string `arg:"" name:"id-or-url"`
+	IDOrURL string `arg:"" name:"id-or-url" help:"Listing ID or public URL."`
 }
 
 func (c *ListingOpenCmd) Validate() error { return validateListingReference(c.IDOrURL) }
@@ -180,8 +182,8 @@ func (*ListingOpenCmd) Describe() app.OperationMeta {
 }
 
 type SellerGetCmd struct {
-	IDOrURL string `arg:"" optional:"" name:"id-or-url"`
-	Listing string
+	IDOrURL string `arg:"" optional:"" name:"id-or-url" help:"Seller ID or public profile/company URL."`
+	Listing string `help:"Listing ID or URL to resolve the seller from."`
 }
 
 func (c *SellerGetCmd) Validate() error {
@@ -198,8 +200,8 @@ func (*SellerGetCmd) Describe() app.OperationMeta {
 }
 
 type SellerSearchCmd struct {
-	Name  string `arg:""`
-	Match string `enum:"exact,contains" default:"contains"`
+	Name  string `arg:"" help:"Seller display name to search."`
+	Match string `enum:"exact,contains" default:"contains" help:"Match mode: exact or contains (default: contains)."`
 }
 
 func (c *SellerSearchCmd) Validate() error { return validateText(c.Name, 256, "seller name") }
@@ -208,8 +210,8 @@ func (*SellerSearchCmd) Describe() app.OperationMeta {
 }
 
 type SellerListingsCmd struct {
-	IDOrURL string `arg:"" name:"id-or-url"`
-	Limit   int    `default:"25"`
+	IDOrURL string `arg:"" name:"id-or-url" help:"Seller ID or public profile/company URL."`
+	Limit   int    `default:"25" help:"Maximum listings (default: 25)."`
 }
 
 func (c *SellerListingsCmd) Validate() error {
@@ -226,8 +228,8 @@ func (*SellerListingsCmd) Describe() app.OperationMeta {
 }
 
 type AuthLoginCmd struct {
-	NoOpen       bool   `name:"no-open"`
-	RedirectFile string `name:"redirect-file" type:"path"`
+	NoOpen       bool   `name:"no-open" help:"Do not open the browser; require --redirect-file."`
+	RedirectFile string `name:"redirect-file" type:"path" help:"Read the callback redirect URL from a file, or - for stdin."`
 }
 
 func (*AuthLoginCmd) Describe() app.OperationMeta {
@@ -241,7 +243,7 @@ func (*AuthStatusCmd) Describe() app.OperationMeta {
 }
 
 type AuthLogoutCmd struct {
-	DryRun bool `name:"dry-run"`
+	DryRun bool `name:"dry-run" help:"Preview local session effects without clearing them."`
 }
 
 func (*AuthLogoutCmd) Describe() app.OperationMeta {
@@ -249,11 +251,11 @@ func (*AuthLogoutCmd) Describe() app.OperationMeta {
 }
 
 type DMListCmd struct {
-	Unread   bool
-	Page     int `default:"0"`
-	PageSize int `name:"page-size" default:"50"`
-	Paginate bool
-	Limit    int `default:"50"`
+	Unread   bool `help:"Only conversations with unread messages."`
+	Page     int  `default:"0" help:"Zero-based page number."`
+	PageSize int  `name:"page-size" default:"50" help:"Conversations per page (default: 50)."`
+	Paginate bool `help:"Fetch pages up to the result bound."`
+	Limit    int  `default:"50" help:"Maximum conversations (default: 50)."`
 }
 
 func (c *DMListCmd) Validate() error {
@@ -267,7 +269,7 @@ func (*DMListCmd) Describe() app.OperationMeta {
 }
 
 type DMGetCmd struct {
-	ConversationID string `arg:"" name:"conversation-id"`
+	ConversationID string `arg:"" name:"conversation-id" help:"Conversation to read."`
 }
 
 func (c *DMGetCmd) Validate() error { return validateReference(c.ConversationID, false) }
@@ -276,11 +278,18 @@ func (*DMGetCmd) Describe() app.OperationMeta {
 }
 
 type DMMarkReadCmd struct {
-	ConversationIDs []string `arg:"" name:"conversation-id"`
-	DryRun          bool     `name:"dry-run"`
+	ConversationIDs []string `arg:"" optional:"" name:"conversation-id" help:"One or more conversation IDs to mark read."`
+	Input           string   `type:"path" help:"Versioned JSON input file or - with conversation_ids."`
+	DryRun          bool     `name:"dry-run" help:"Preview mark-read without changing account state."`
 }
 
 func (c *DMMarkReadCmd) Validate() error {
+	if c.Input != "" {
+		if len(c.ConversationIDs) > 0 {
+			return fmt.Errorf("provide conversation IDs either positionally or via --input, not both")
+		}
+		return nil
+	}
 	if len(c.ConversationIDs) == 0 || len(c.ConversationIDs) > 100 {
 		return fmt.Errorf("provide between 1 and 100 conversation IDs")
 	}
@@ -296,12 +305,12 @@ func (*DMMarkReadCmd) Describe() app.OperationMeta {
 }
 
 type DMPollCmd struct {
-	After       string
-	Since       string
-	Limit       int `default:"200"`
-	Advance     bool
-	NoAdvance   bool `name:"no-advance"`
-	OpenChanged bool `name:"open-changed"`
+	After       string `help:"Resume after this cursor."`
+	Since       string `help:"Baseline time (RFC 3339) or now."`
+	Limit       int    `default:"200" help:"Conversations to scan this cycle (default: 200)."`
+	Advance     bool   `help:"Advance the stored cursor after a successful cycle."`
+	NoAdvance   bool   `name:"no-advance" help:"Never advance the stored cursor."`
+	OpenChanged bool   `name:"open-changed" help:"Open changed threads (state-touching) to identify message events."`
 }
 
 func (c *DMPollCmd) Validate() error {
@@ -321,12 +330,12 @@ func (*DMPollCmd) Describe() app.OperationMeta {
 }
 
 type DMWatchCmd struct {
-	After             string
-	Since             string
-	Interval          time.Duration `default:"30s"`
-	Limit             int           `default:"200"`
-	IncludeHeartbeats bool          `name:"include-heartbeats"`
-	OpenChanged       bool          `name:"open-changed"`
+	After             string        `help:"Resume after this cursor."`
+	Since             string        `help:"Baseline time (RFC 3339) or now."`
+	Interval          time.Duration `default:"30s" help:"Sync interval (minimum 30s)."`
+	Limit             int           `default:"200" help:"Conversations to scan per cycle (default: 200)."`
+	IncludeHeartbeats bool          `name:"include-heartbeats" help:"Emit a heartbeat when the stream is idle."`
+	OpenChanged       bool          `name:"open-changed" help:"Open changed threads (state-touching) to identify message events."`
 }
 
 func (c *DMWatchCmd) Validate() error {
@@ -346,14 +355,14 @@ func (*DMWatchCmd) Describe() app.OperationMeta {
 }
 
 type DMReplyCmd struct {
-	ConversationID               string `arg:"" name:"conversation-id"`
-	Message                      string
-	MessageFile                  string `name:"message-file" type:"path"`
-	Input                        string `type:"path"`
-	DryRun                       bool   `name:"dry-run"`
-	Confirm                      string
-	AcknowledgeWarning           string `name:"acknowledge-warning"`
-	AcknowledgePossibleDuplicate string `name:"acknowledge-possible-duplicate"`
+	ConversationID               string `arg:"" name:"conversation-id" help:"Conversation to reply in."`
+	Message                      string `help:"Message text."`
+	MessageFile                  string `name:"message-file" type:"path" help:"Read message text from a file, or - for stdin."`
+	Input                        string `type:"path" help:"Versioned JSON operation input file or -."`
+	DryRun                       bool   `name:"dry-run" help:"Preview the reply plan without sending."`
+	Confirm                      string `help:"Confirmation id from a matching dry run."`
+	AcknowledgeWarning           string `name:"acknowledge-warning" help:"Acknowledge a platform warning code."`
+	AcknowledgePossibleDuplicate string `name:"acknowledge-possible-duplicate" help:"Acknowledge an ambiguous prior send by its confirmation id."`
 }
 
 func (c *DMReplyCmd) Validate() error {
@@ -367,15 +376,15 @@ func (*DMReplyCmd) Describe() app.OperationMeta {
 }
 
 type DMStartCmd struct {
-	ListingIDOrURL               string `arg:"" name:"listing-id-or-url"`
-	Message                      string
-	MessageFile                  string `name:"message-file" type:"path"`
-	Input                        string `type:"path"`
-	ContactName                  string `name:"contact-name"`
-	DryRun                       bool   `name:"dry-run"`
-	Confirm                      string
-	AcknowledgeWarning           string `name:"acknowledge-warning"`
-	AcknowledgePossibleDuplicate string `name:"acknowledge-possible-duplicate"`
+	ListingIDOrURL               string `arg:"" name:"listing-id-or-url" help:"Listing ID or public URL to contact."`
+	Message                      string `help:"First message text."`
+	MessageFile                  string `name:"message-file" type:"path" help:"Read message text from a file, or - for stdin."`
+	Input                        string `type:"path" help:"Versioned JSON operation input file or -."`
+	ContactName                  string `name:"contact-name" help:"Exact contact name sent with the first message."`
+	DryRun                       bool   `name:"dry-run" help:"Preview the first-contact plan without sending."`
+	Confirm                      string `help:"Confirmation id from a matching dry run."`
+	AcknowledgeWarning           string `name:"acknowledge-warning" help:"Acknowledge a platform warning code."`
+	AcknowledgePossibleDuplicate string `name:"acknowledge-possible-duplicate" help:"Acknowledge an ambiguous prior send by its confirmation id."`
 }
 
 func (c *DMStartCmd) Validate() error {

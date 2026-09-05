@@ -108,3 +108,46 @@ those exist, ④–⑥ are executable in the plan's documented sequence.
 | anonymous discovery (category/location/search/listing/filter) | `Live`-intended, **not yet live-proven** | `Live` after ① ② ④ |
 | authenticated auth/DM | `source` / `designed` / `provisional` | `source`→verified after ① ③ ⑤ |
 | local seller index, search exclusions, cursor/event behaviour | `Local` | stays `Local` |
+
+## 🔭 Still to test / decide (consolidated)
+
+The offline codebase is complete and green. Everything below still needs a
+**decision from you**, **live/external verification**, or is a **deliberate
+by-design** trade-off. Nothing here can be finished purely in-repo today.
+
+### Needs a decision
+
+- **OIDC ID-token signature (audit #9)** — keep the plan's deliberate
+  TLS-back-channel validation (OIDC Core §3.1.3.7), or switch to JWKS signature
+  verification (adds a fixture + fake JWKS server). Not done unilaterally
+  because it reverses the documented plan decision.
+- **Conversation preview retention (audit #16)** — pick a retention period so
+  the code, `docs/dm-sync.md`, `docs/kcli-scope.md`, and the kcli skill agree.
+  Currently the code keeps previews for the account's lifetime while the docs
+  state a 7-day preview retention.
+
+### Needs live evidence (the six gates above)
+
+- Anonymous discovery and the authenticated/DM contracts cannot be proven by an
+  offline test; the six blocked items above are the prerequisites.
+
+### Coverage gaps that need a code change
+
+- **Keyring backend coverage (#20)** — the shipping `osBackend` and
+  `CheckAvailability` are untested; the test-only fake is `//go:build testing`,
+  so an untagged `go test ./...` skips the secret Store tests (by design). Full
+  coverage needs a `zalando/go-keyring` mock or a non-tagged fake that is
+  excluded from release binaries.
+- **testscript exit-code scenarios (#19)** — full send/pagination scenarios are
+  not offline-reachable because the CLI transport cannot be injected; the
+  local/destructive exit-code cases are already covered.
+
+### By design (deliberate, not defects)
+
+- ecode machine-readable output is 2/3: NDJSON is opt-in and finite pagination
+  emits one envelope so stop/count metadata is not lost.
+- Schema introspection is 2/3: the category-filter overlay stays static until
+  live metadata is cached.
+- Knowledge packaging is 2/3: operation examples are surfaced via
+  `kcli schema show`, not inline `--help`, because Kong has no native
+  per-command examples.

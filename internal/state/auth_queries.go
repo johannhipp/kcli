@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
-
-	generated "github.com/johannhipp/kcli/internal/state/sqlc"
 )
 
 const (
@@ -65,7 +63,7 @@ func (d *DB) AuthStoreAccount(ctx context.Context, subjectHash, accountID string
 	if !authAccountHashPattern.MatchString(subjectHash) || !authAccountIDPattern.MatchString(accountID) {
 		return fmt.Errorf("invalid authenticated account identity")
 	}
-	return d.WithTx(ctx, func(tx *sql.Tx, q *generated.Queries) error {
+	return d.WithTx(ctx, func(tx *sql.Tx, q *Queries) error {
 		previous, err := q.GetMeta(ctx, authAccountHashKey)
 		if err != nil && err != sql.ErrNoRows {
 			return err
@@ -110,7 +108,7 @@ func (d *DB) AuthLogoutPreview(ctx context.Context) (AuthLogoutEffect, error) {
 
 func (d *DB) AuthLogout(ctx context.Context) (AuthLogoutEffect, error) {
 	var effect AuthLogoutEffect
-	err := d.WithTx(ctx, func(tx *sql.Tx, q *generated.Queries) error {
+	err := d.WithTx(ctx, func(tx *sql.Tx, q *Queries) error {
 		hash, err := q.GetMeta(ctx, authAccountHashKey)
 		if err == nil {
 			id, idErr := q.GetMeta(ctx, authAccountIDKey)
@@ -143,7 +141,7 @@ func (d *DB) AuthLogout(ctx context.Context) (AuthLogoutEffect, error) {
 	return effect, nil
 }
 
-func authAdvanceGeneration(ctx context.Context, q *generated.Queries) (int64, error) {
+func authAdvanceGeneration(ctx context.Context, q *Queries) (int64, error) {
 	stored, err := q.GetMeta(ctx, authCursorGenerationKey)
 	if err != nil {
 		return 0, err

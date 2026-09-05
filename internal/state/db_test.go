@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
-
-	generated "github.com/johannhipp/kcli/internal/state/sqlc"
 )
 
 func TestOpenMigratesAndConfiguresSQLite(t *testing.T) {
@@ -20,7 +18,7 @@ func TestOpenMigratesAndConfiguresSQLite(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-	names, err := db.Queries().ListSchemaTables(ctx)
+	names, err := db.SchemaTables(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +52,7 @@ func TestTransactionRollbackAndLease(t *testing.T) {
 	}
 	defer db.Close()
 	sentinel := errors.New("rollback")
-	err = db.WithTx(ctx, func(_ *sql.Tx, q *generated.Queries) error {
+	err = db.WithTx(ctx, func(_ *sql.Tx, q *Queries) error {
 		if err := q.SetMeta(ctx, "rolled_back", "value"); err != nil {
 			return err
 		}

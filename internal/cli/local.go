@@ -154,7 +154,7 @@ func (c *DoctorCmd) Run(runtimeContext *Runtime) error {
 	if err != nil {
 		checks = append(checks, domain.DoctorCheckV1{Name: "state", Status: "error", Detail: "state database could not be opened"})
 	} else {
-		tables, tableErr := db.Queries().ListSchemaTables(runtimeContext.Context)
+		tables, tableErr := db.SchemaTables(runtimeContext.Context)
 		_ = db.Close()
 		if tableErr != nil {
 			checks = append(checks, domain.DoctorCheckV1{Name: "state", Status: "error", Detail: "schema health check failed"})

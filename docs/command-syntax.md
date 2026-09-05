@@ -1,6 +1,6 @@
-# Proposed kcli command syntax
+# kcli command syntax
 
-Status: naming proposal for user review
+Status: implemented (offline); automated live testing and the `0.1.0` release remain gated
 Current release: commands marked **v0.1**
 
 This document fixes command names and argument shapes before implementation.
@@ -11,7 +11,7 @@ intentional top-level verb because it is the product's primary action.
 
 ```text
 kcli [--profile NAME] [--output FORMAT] [--fields LIST]
-     [--no-color] [--quiet] [--debug] [--timeout DURATION]
+     [--quiet] [--debug] [--timeout DURATION]
      COMMAND
 ```
 
@@ -125,7 +125,7 @@ token-family behavior are verified.
 kcli dm list [--unread] [--page NUMBER] [--page-size NUMBER]
   [--paginate] [--limit NUMBER]
 kcli dm get CONVERSATION_ID
-kcli dm mark-read CONVERSATION_ID... [--dry-run]
+kcli dm mark-read CONVERSATION_ID... [--input FILE|-] [--dry-run]
 
 kcli dm poll [--after CURSOR | --since TIME_OR_NOW]
   [--limit NUMBER] [--advance | --no-advance] [--open-changed]
@@ -179,6 +179,13 @@ and contact name again; changing any bound value invalidates it. No TTY or
 non-TTY path bypasses the two commands. A platform warning requires a new dry
 run with the exact warning code, and a prior ambiguous send requires explicit
 acknowledgement of its confirmation ID after the user inspects the thread.
+
+After an ambiguous send, kcli reconciles the thread once and reports
+`sent_reconciled` only when a recent outgoing message matches after
+normalization and a narrow timestamp window relative to the *local* clock. A
+machine clock skewed from the service's `ReceivedAt` can therefore turn a
+successful send into `outcome_unknown` (exit 8) instead of a success; reconcile
+the thread manually before deciding whether to resend.
 
 There are deliberately no `pickup`, `offer`, `negotiate`, `meeting`, `pay`, or
 `transaction` commands. Those subjects are ordinary text passed to `dm reply` or

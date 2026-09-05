@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/johannhipp/kcli/internal/domain"
-	generated "github.com/johannhipp/kcli/internal/state/sqlc"
 )
 
 const (
@@ -110,6 +109,9 @@ func (d *DB) ValidateCursor(ctx context.Context, accountHash string, payload dom
 	}
 	identity, err := d.CursorIdentity(ctx, accountHash)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrCursorContinuity
+		}
 		return err
 	}
 	if payload.ProfileUUID != identity.ProfileUUID || payload.Generation != identity.Generation {
@@ -139,7 +141,7 @@ func (d *DB) AdvanceCursorHead(ctx context.Context, accountHash string, generati
 	if d == nil || d.sql == nil || !authAccountHashPattern.MatchString(accountHash) || generation < 0 || sequence < 0 {
 		return fmt.Errorf("invalid cursor advance")
 	}
-	return d.WithTx(ctx, func(tx *sql.Tx, _ *generated.Queries) error {
+	return d.WithTx(ctx, func(tx *sql.Tx, _ *Queries) error {
 		var storedGeneration, current int64
 		if err := tx.QueryRowContext(ctx, `SELECT generation, acknowledged_sequence FROM cursor_heads WHERE account_hash=?`, accountHash).Scan(&storedGeneration, &current); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
@@ -248,7 +250,7 @@ func (d *DB) AcquireSyncLease(ctx context.Context, profileUUID, accountHash, own
 	}
 	nowMS, expiresMS := now.UTC().UnixMilli(), now.UTC().Add(ttl).UnixMilli()
 	var acquired bool
-	err = d.WithTx(ctx, func(tx *sql.Tx, _ *generated.Queries) error {
+	err = d.WithTx(ctx, func(tx *sql.Tx, _ *Queries) error {
 		result, err := tx.ExecContext(ctx, `INSERT INTO leases(name, owner, expires_at_ms) VALUES(?, ?, ?) ON CONFLICT(name) DO UPDATE SET owner=excluded.owner, expires_at_ms=excluded.expires_at_ms WHERE leases.expires_at_ms <= ? OR leases.owner=?`, name, owner, expiresMS, nowMS, owner)
 		if err != nil {
 			return err
@@ -291,7 +293,7 @@ func (d *DB) CommitSyncBatch(ctx context.Context, batch SyncBatch) (SyncCommit, 
 		return SyncCommit{}, fmt.Errorf("invalid synchronization retention or batch bounds")
 	}
 	commit := SyncCommit{}
-	err := d.WithTx(ctx, func(tx *sql.Tx, q *generated.Queries) error {
+	err := d.WithTx(ctx, func(tx *sql.Tx, q *Queries) error {
 		identity, err := d.cursorIdentityTx(ctx, q, batch.AccountHash)
 		if err != nil {
 			return err
@@ -306,7 +308,7 @@ func (d *DB) CommitSyncBatch(ctx context.Context, batch SyncBatch) (SyncCommit, 
 		}
 		var storedGeneration int64
 		if err := tx.QueryRowContext(ctx, `SELECT generation FROM cursor_heads WHERE account_hash=?`, batch.AccountHash).Scan(&storedGeneration); err != nil || storedGeneration != batch.Generation {
-			if err == nil {
+			if err == nil || errors.Is(err, sql.ErrNoRows) {
 				return ErrCursorContinuity
 			}
 			return err
@@ -360,7 +362,7 @@ func (d *DB) CommitSyncBatch(ctx context.Context, batch SyncBatch) (SyncCommit, 
 	return commit, nil
 }
 
-func (d *DB) cursorIdentityTx(ctx context.Context, q *generated.Queries, accountHash string) (CursorHead, error) {
+func (d *DB) cursorIdentityTx(ctx context.Context, q *Queries, accountHash string) (CursorHead, error) {
 	profileUUID, err := q.GetMeta(ctx, "profile_uuid")
 	if err != nil {
 		return CursorHead{}, err
@@ -376,7 +378,7 @@ func (d *DB) cursorIdentityTx(ctx context.Context, q *generated.Queries, account
 	return CursorHead{ProfileUUID: profileUUID, AccountHash: accountHash, Generation: generation}, nil
 }
 
-func syncCycleCountTx(ctx context.Context, q *generated.Queries, accountHash string) (int64, error) {
+func syncCycleCountTx(ctx context.Context, q *Queries, accountHash string) (int64, error) {
 	value, err := q.GetMeta(ctx, syncCycleKey(accountHash))
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, nil

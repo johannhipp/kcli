@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"fmt"
-
 	"github.com/johannhipp/kcli/internal/app"
 	"github.com/johannhipp/kcli/internal/domain"
 	"github.com/johannhipp/kcli/internal/kleinanzeigen"
@@ -82,7 +80,7 @@ func (c *FilterGetCmd) Run(runtime *Runtime) error {
 
 func metadataService(runtime *Runtime) (*kleinanzeigen.MetadataService, error) {
 	if runtime == nil || runtime.Core == nil || runtime.Core.State == nil || runtime.Core.Transport == nil {
-		return nil, fmt.Errorf("metadata runtime dependencies are unavailable")
+		return nil, &domain.Error{Code: domain.CodeUnavailable, Message: "metadata runtime dependencies are unavailable"}
 	}
 	return kleinanzeigen.NewMetadataService(runtime.Core.Transport, runtime.Core.State), nil
 }

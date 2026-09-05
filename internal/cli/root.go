@@ -27,7 +27,6 @@ type Root struct {
 	Profile string        `help:"Named profile." default:"default"`
 	Output  string        `help:"Output format: table, json, ndjson, or raw." placeholder:"FORMAT"`
 	Fields  string        `help:"Comma-separated schema field paths." placeholder:"LIST"`
-	NoColor bool          `help:"Disable color output."`
 	Quiet   bool          `help:"Suppress diagnostics, never primary output."`
 	Debug   bool          `help:"Print redacted diagnostics."`
 	Timeout time.Duration `help:"Lower the operation deadline." placeholder:"DURATION"`
@@ -215,6 +214,11 @@ func Execute(ctx context.Context, args []string, stdin io.Reader, stdout, stderr
 	}
 	if root.Fields != "" {
 		runtime.Encoder.Fields = strings.Split(root.Fields, ",")
+		if selected != "" {
+			if err := runtime.Catalog.ValidateFields(selected, runtime.Encoder.Fields); err != nil {
+				return fail(runtime, invalidError(err), true)
+			}
+		}
 	}
 	if root.Timeout < 0 || root.Timeout > 60*time.Second {
 		return fail(runtime, &domain.Error{Code: domain.CodeInvalidInput, Message: "timeout must be no greater than 60s"}, true)

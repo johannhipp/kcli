@@ -24,7 +24,7 @@ type EffectiveValue struct {
 	Source string `json:"source"`
 }
 
-var defaultConfigValues = map[string]string{"output": "auto", "timeout": "25s", "no_color": "false", "quiet": "false"}
+var defaultConfigValues = map[string]string{"output": "auto", "timeout": "25s", "quiet": "false"}
 
 type ConfigChange struct {
 	Key    string  `json:"key"`
@@ -179,7 +179,7 @@ func validateConfigValue(key, value string) error {
 		if err != nil || duration <= 0 || duration > 60*time.Second {
 			return fmt.Errorf("timeout must be a positive duration no greater than 60s")
 		}
-	case "no_color", "quiet":
+	case "quiet":
 		if _, err := strconv.ParseBool(value); err != nil {
 			return fmt.Errorf("%s must be true or false", key)
 		}

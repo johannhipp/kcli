@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-
-	generated "github.com/johannhipp/kcli/internal/state/sqlc"
 )
 
 const (
@@ -48,7 +46,7 @@ func (d *DB) UpsertSellerListing(ctx context.Context, seller SellerSnapshot, lis
 	if listing.SellerID != seller.ID || listing.ListingID == "" || listing.ObservedAt.IsZero() {
 		return fmt.Errorf("invalid seller listing snapshot")
 	}
-	return d.WithTx(ctx, func(tx *sql.Tx, _ *generated.Queries) error {
+	return d.WithTx(ctx, func(tx *sql.Tx, _ *Queries) error {
 		observed := seller.ObservedAt.UTC().Format(time.RFC3339Nano)
 		if _, err := tx.ExecContext(ctx, `INSERT INTO sellers(seller_id,folded_name,display_name,public_json,source,completeness,observed_at) VALUES(?,?,?,?,?,?,?) ON CONFLICT(seller_id) DO UPDATE SET folded_name=excluded.folded_name,display_name=excluded.display_name,public_json=excluded.public_json,source=excluded.source,completeness=excluded.completeness,observed_at=excluded.observed_at`, seller.ID, seller.FoldedName, seller.DisplayName, []byte(seller.PublicJSON), seller.Source, seller.Completeness, observed); err != nil {
 			return err

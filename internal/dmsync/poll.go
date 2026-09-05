@@ -3,7 +3,6 @@ package dmsync
 import (
 	"context"
 	"crypto/sha256"
-	"database/sql"
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
@@ -113,16 +112,23 @@ func (p *Poller) Run(ctx context.Context, options PollOptions) (PollResult, erro
 		return PollResult{}, err
 	}
 
+	// Load the stored summaries for the page's conversations in one batched read
+	// rather than one SELECT per conversation.
+	storedSummaries, err := p.State.ConversationSummaries(ctx, p.AccountHash, conversationIDs(remote))
+	if err != nil {
+		return PollResult{}, continuityError("stored conversation state is unreadable", err)
+	}
+	storedByID := make(map[string]state.ConversationSummary, len(storedSummaries))
+	for _, summary := range storedSummaries {
+		storedByID[summary.ConversationID] = summary
+	}
+
 	summaries := make([]state.ConversationSummary, 0, len(remote))
 	messages := make([]state.MessageFingerprint, 0)
 	pending := make([]state.PendingEvent, 0)
 	for _, conversation := range remote {
 		incoming := conversationState(p.AccountHash, conversation, observedAt)
-		previous, previousErr := p.State.ConversationSummary(ctx, p.AccountHash, conversation.ID)
-		exists := previousErr == nil
-		if previousErr != nil && !errors.Is(previousErr, sql.ErrNoRows) {
-			return PollResult{}, continuityError("stored conversation state is unreadable", previousErr)
-		}
+		previous, exists := storedByID[conversation.ID]
 		if exists {
 			preserveUnknownSummary(&incoming, conversation, previous)
 		}
@@ -135,8 +141,15 @@ func (p *Poller) Run(ctx context.Context, options PollOptions) (PollResult, erro
 		if baselineNow {
 			continue
 		}
-		if !sinceTime.IsZero() && !conversationAtOrAfter(incoming, sinceTime) {
-			continue
+		if !sinceTime.IsZero() {
+			observed, parseErr := time.Parse(time.RFC3339Nano, incoming.LastActivity)
+			if parseErr != nil {
+				warnings = append(warnings, domain.WarningV1{Code: "conversation_timestamp_unparseable", Message: "a conversation had an unparseable last-activity timestamp and was excluded from the since window"})
+				continue
+			}
+			if observed.Before(sinceTime) {
+				continue
+			}
 		}
 		if changed {
 			pending = append(pending, conversationEvents(p.AccountHash, previous, incoming, fingerprint, exists, observedAt)...)
@@ -279,6 +292,14 @@ func (p *Poller) fetchConversations(ctx context.Context, pageLimit int) ([]klein
 	return result, warnings, pages, nil
 }
 
+func conversationIDs(conversations []kleinanzeigen.ConversationSummary) []string {
+	ids := make([]string, 0, len(conversations))
+	for _, conversation := range conversations {
+		ids = append(ids, conversation.ID)
+	}
+	return ids
+}
+
 func conversationState(accountHash string, remote kleinanzeigen.ConversationSummary, observedAt time.Time) state.ConversationSummary {
 	lastActivity := remote.ReceivedRaw
 	if !remote.ReceivedAt.IsZero() {
@@ -400,11 +421,6 @@ func encodeCursor(identity state.CursorHead, sequence int64) (string, error) {
 		FormatVersion: domain.CursorFormatV1, ProfileUUID: identity.ProfileUUID,
 		AccountSubjectHash: identity.AccountHash, Generation: identity.Generation, Sequence: sequence,
 	})
-}
-
-func conversationAtOrAfter(summary state.ConversationSummary, since time.Time) bool {
-	observed, err := time.Parse(time.RFC3339Nano, summary.LastActivity)
-	return err == nil && !observed.Before(since)
 }
 
 func boundedPreview(value string) string {

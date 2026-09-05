@@ -42,6 +42,11 @@ The first planned release is `0.1.0`. There are no tagged releases yet.
 - Added the authenticated DM surface: inbox reads with body-free fingerprints and account isolation, preview-bound single-confirm reply/start messaging (digest-only plans, atomic single-use claims, ambiguous-outcome reconciliation), and resumable list-only `dm poll` plus foreground NDJSON `dm watch`.
 - Hardening: staticcheck and govulncheck lanes, a six-target cross-compile lane, an installable kcli agent skill, and a `go` toolchain pin with no standard-library vulnerabilities.
 
+### Removed
+
+- Removed the unused `--no-color` global flag and the unread `no_color` config
+  key: table output never emits colour, so the option had no effect.
+
 ### Changed
 
 - Classified the comprehensive web user-story inventory as the long-term backlog

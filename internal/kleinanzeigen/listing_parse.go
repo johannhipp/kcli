@@ -1,69 +1,16 @@
 package kleinanzeigen
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strconv"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/johannhipp/kcli/internal/domain"
 )
-
-var (
-	listingIDPattern        = regexp.MustCompile(`^[0-9]+$`)
-	listingURLSuffixPattern = regexp.MustCompile(`^/s-anzeige/[^/]+/([0-9]+)-[0-9]+-[0-9]+/?$`)
-	listingSensitiveKeys    = map[string]bool{"authorization": true, "access_token": true, "refresh_token": true, "id_token": true, "email": true, "password": true, "client_secret": true, "message": true, "message_body": true, "authorization_code": true, "code_verifier": true, "oauth_state": true}
-)
-
-type ListingMedia = domain.ListingMediaV1
-
-type ListingSeller = domain.SellerV1
-
-type ListingDetail struct {
-	Listing    domain.ListingV1
-	Normalized map[string]any
-	Media      []ListingMedia
-	Seller     ListingSeller
-	Raw        json.RawMessage
-	Warnings   []domain.WarningV1
-}
-
-func ListingReferenceID(reference string) (string, error) {
-	if reference == "" || len(reference) > 1024 || !utf8.ValidString(reference) || strings.IndexFunc(reference, func(r rune) bool { return r < 0x20 || r == 0x7f }) >= 0 {
-		return "", &domain.Error{Code: domain.CodeInvalidIdentifier, Message: "invalid listing reference"}
-	}
-	if listingIDPattern.MatchString(reference) {
-		return reference, nil
-	}
-	lower := strings.ToLower(reference)
-	if strings.Contains(lower, "%2f") || strings.Contains(lower, "%5c") || strings.Contains(lower, "%2e") || strings.Contains(reference, `\`) {
-		return "", &domain.Error{Code: domain.CodeInvalidIdentifier, Message: "invalid listing URL"}
-	}
-	parsed, err := url.Parse(reference)
-	if err != nil || parsed.Scheme != "https" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" || parsed.Port() != "" {
-		return "", &domain.Error{Code: domain.CodeInvalidIdentifier, Message: "invalid listing URL"}
-	}
-	decodedPath, err := url.PathUnescape(parsed.EscapedPath())
-	if err != nil || strings.IndexFunc(decodedPath, func(r rune) bool { return r < 0x20 || r == 0x7f }) >= 0 {
-		return "", &domain.Error{Code: domain.CodeInvalidIdentifier, Message: "listing URL path contains encoded control characters"}
-	}
-	host := strings.ToLower(parsed.Hostname())
-	if host != "kleinanzeigen.de" && host != "www.kleinanzeigen.de" {
-		return "", &domain.Error{Code: domain.CodeInvalidIdentifier, Message: "listing URL host is not allowed"}
-	}
-	match := listingURLSuffixPattern.FindStringSubmatch(parsed.EscapedPath())
-	if len(match) != 2 {
-		return "", &domain.Error{Code: domain.CodeInvalidIdentifier, Message: "listing URL path is not a recognized public listing form"}
-	}
-	return match[1], nil
-}
 
 func ListingFetch(ctx context.Context, transport Transport, reference string) (ListingDetail, error) {
 	if transport == nil {
@@ -73,7 +20,7 @@ func ListingFetch(ctx context.Context, transport Transport, reference string) (L
 	if err != nil {
 		return ListingDetail{}, err
 	}
-	response, err := transport.Do(Request{Context: ctx, Host: HostMain, Method: http.MethodGet, Path: "/api/ads/" + id + ".json", MaxResponseBytes: JSONResponseLimit, Class: VolatileRead})
+	response, err := transport.Do(getJSONRequest(ctx, "/api/ads/"+id+".json", nil, VolatileRead, false))
 	if err != nil {
 		return ListingDetail{}, err
 	}
@@ -209,95 +156,6 @@ func (t *MobileTransport) AllowMediaURL(raw string) error {
 		return fmt.Errorf("underlying transport cannot allow media URLs")
 	}
 	return allower.AllowMediaURL(raw)
-}
-
-type MediaResponse struct {
-	StatusCode int
-	Headers    map[string][]string
-	Body       io.ReadCloser
-}
-
-func (t *HTTPTransport) OpenMedia(input Request) (MediaResponse, error) {
-	if input.Host != HostMedia {
-		return MediaResponse{}, fmt.Errorf("streaming media requires the media host")
-	}
-	requestURL, err := t.requestURL(input)
-	if err != nil {
-		return MediaResponse{}, err
-	}
-	if input.Context == nil {
-		input.Context = context.Background()
-	}
-	request, err := http.NewRequestWithContext(input.Context, http.MethodGet, requestURL.String(), nil)
-	if err != nil {
-		return MediaResponse{}, fmt.Errorf("create media request: %w", err)
-	}
-	for key, values := range input.Headers {
-		if strings.ContainsAny(key, "\r\n") {
-			return MediaResponse{}, fmt.Errorf("invalid header name")
-		}
-		for _, value := range values {
-			if strings.ContainsAny(value, "\r\n") {
-				return MediaResponse{}, fmt.Errorf("invalid header value")
-			}
-			request.Header.Add(key, value)
-		}
-	}
-	client := *t.client
-	client.CheckRedirect = func(next *http.Request, _ []*http.Request) error {
-		if t.redirectAllowed(HostMedia, next.URL) {
-			return nil
-		}
-		return http.ErrUseLastResponse
-	}
-	response, err := client.Do(request)
-	if err != nil {
-		return MediaResponse{}, ConnectError(err)
-	}
-	return MediaResponse{StatusCode: response.StatusCode, Headers: cloneHeaders(response.Header), Body: response.Body}, nil
-}
-
-func (t *MobileTransport) OpenMedia(input Request) (MediaResponse, error) {
-	if input.Context == nil {
-		input.Context = context.Background()
-	}
-	requestContext, cancel := requestDeadline(input.Context, HostMedia, input.Timeout)
-	input.Context = requestContext
-	input.Host = HostMedia
-	input.Method = http.MethodGet
-	input.Headers = t.mobileHeaders(HostMedia, input.Headers)
-	if err := t.reserve(requestContext, HostMedia, false); err != nil {
-		cancel()
-		return MediaResponse{}, err
-	}
-	if opener, ok := t.base.(interface {
-		OpenMedia(Request) (MediaResponse, error)
-	}); ok {
-		response, err := opener.OpenMedia(input)
-		if err != nil {
-			cancel()
-			return MediaResponse{}, err
-		}
-		response.Body = &listingCancelReadCloser{ReadCloser: response.Body, cancel: cancel}
-		return response, nil
-	}
-	response, err := t.base.Do(input)
-	if err != nil {
-		cancel()
-		return MediaResponse{}, err
-	}
-	return MediaResponse{StatusCode: response.StatusCode, Headers: response.Headers, Body: &listingCancelReadCloser{ReadCloser: io.NopCloser(bytes.NewReader(response.Body)), cancel: cancel}}, nil
-}
-
-type listingCancelReadCloser struct {
-	io.ReadCloser
-	cancel context.CancelFunc
-}
-
-func (r *listingCancelReadCloser) Close() error {
-	err := r.ReadCloser.Close()
-	r.cancel()
-	return err
 }
 
 func listingAdObject(value any) (map[string]any, bool) {
@@ -691,24 +549,6 @@ func listingIntegerField(object map[string]any, name string) int {
 	return integer
 }
 
-func listingMediaMaps(media []ListingMedia) []map[string]any {
-	out := make([]map[string]any, 0, len(media))
-	for _, item := range media {
-		entry := map[string]any{"index": item.Index, "relation": item.Relation, "url": item.URL}
-		if item.Width > 0 {
-			entry["width"] = item.Width
-		}
-		if item.Height > 0 {
-			entry["height"] = item.Height
-		}
-		if item.SizeLabel != "" {
-			entry["size_label"] = item.SizeLabel
-		}
-		out = append(out, entry)
-	}
-	return out
-}
-
 func listingSeller(ad map[string]any, links []map[string]any) ListingSeller {
 	seller := ListingSeller{
 		Badges:       []string{},
@@ -830,69 +670,4 @@ func listingExactCents(amount string) (int64, bool) {
 		}
 	}
 	return euros*100 + fraction, true
-}
-
-func listingRedact(value any) any {
-	switch current := value.(type) {
-	case map[string]any:
-		out := make(map[string]any, len(current))
-		sensitiveNamedValue := listingSensitiveNamedValue(current)
-		for childKey, child := range current {
-			local := strings.ToLower(listingLocalName(childKey))
-			if listingSensitiveKey(childKey) || sensitiveNamedValue && (local == "value" || local == "values") {
-				out[childKey] = "[REDACTED]"
-			} else {
-				out[childKey] = listingRedact(child)
-			}
-		}
-		return out
-	case []any:
-		out := make([]any, len(current))
-		for index, child := range current {
-			out[index] = listingRedact(child)
-		}
-		return out
-	case string:
-		return listingRedactString(current)
-	default:
-		return current
-	}
-}
-
-func listingSensitiveNamedValue(object map[string]any) bool {
-	for _, field := range []string{"name", "key"} {
-		if value, ok := listingFieldString(object, field); ok && listingSensitiveKey(value) {
-			return true
-		}
-	}
-	return false
-}
-
-func listingSensitiveKey(key string) bool {
-	local := strings.ToLower(listingLocalName(key))
-	return listingSensitiveKeys[local] || strings.HasSuffix(local, "-email") || strings.HasSuffix(local, "_email")
-}
-
-func listingRedactString(value string) string {
-	value = RedactText(value)
-	if !strings.Contains(value, "?") {
-		return value
-	}
-	parsed, err := url.Parse(value)
-	if err != nil {
-		return value
-	}
-	query := parsed.Query()
-	changed := false
-	for key := range query {
-		if listingSensitiveKeys[strings.ToLower(key)] {
-			query.Set(key, "REDACTED")
-			changed = true
-		}
-	}
-	if changed {
-		parsed.RawQuery = query.Encode()
-		return parsed.String()
-	}
-	return value
 }

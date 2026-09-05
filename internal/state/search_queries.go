@@ -10,8 +10,6 @@ import (
 	"unicode"
 
 	"golang.org/x/text/unicode/norm"
-
-	generated "github.com/johannhipp/kcli/internal/state/sqlc"
 )
 
 // SearchSellerRecord is the public seller and listing snapshot observed in a
@@ -35,7 +33,7 @@ func (d *DB) SearchUpsertSellers(ctx context.Context, records []SearchSellerReco
 	if d == nil {
 		return fmt.Errorf("state database is unavailable")
 	}
-	return d.WithTx(ctx, func(tx *sql.Tx, _ *generated.Queries) error {
+	return d.WithTx(ctx, func(tx *sql.Tx, _ *Queries) error {
 		for _, record := range records {
 			if record.SellerID == "" || record.ListingID == "" {
 				continue

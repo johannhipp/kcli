@@ -1,6 +1,6 @@
 # DM polling, watching, and local service design
 
-Status: proposed contract
+Status: implemented (offline) as list-only polling + NDJSON watch; live verification remains a Phase 0 gate
 Current release target: one-shot polling and foreground watching in `0.1.0`
 
 ## The upstream reality

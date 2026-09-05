@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/johannhipp/kcli/internal/domain"
-	generated "github.com/johannhipp/kcli/internal/state/sqlc"
 )
 
 const minimumHostSpacing = 2500 * time.Millisecond
@@ -44,7 +43,7 @@ type LocationCacheEntry struct {
 
 func (d *DB) MobileInstallID(ctx context.Context, now time.Time) (string, error) {
 	var id string
-	err := d.WithTx(ctx, func(tx *sql.Tx, q *generated.Queries) error {
+	err := d.WithTx(ctx, func(tx *sql.Tx, q *Queries) error {
 		uuid, err := q.GetMeta(ctx, "profile_uuid")
 		if err != nil {
 			return err
@@ -81,7 +80,7 @@ func (d *DB) ReserveRateSlot(ctx context.Context, host string, now time.Time, ji
 	}
 	nowMS := now.UTC().UnixMilli()
 	var wait time.Duration
-	err := d.WithTx(ctx, func(_ *sql.Tx, q *generated.Queries) error {
+	err := d.WithTx(ctx, func(_ *sql.Tx, q *Queries) error {
 		next, err := q.GetRateSlot(ctx, host)
 		if err == sql.ErrNoRows {
 			next = nowMS
@@ -106,7 +105,7 @@ func (d *DB) ReserveRateSlot(ctx context.Context, host string, now time.Time, ji
 }
 
 func (d *DB) MoveRateSlot(ctx context.Context, host string, notBefore time.Time) error {
-	return d.WithTx(ctx, func(_ *sql.Tx, q *generated.Queries) error {
+	return d.WithTx(ctx, func(_ *sql.Tx, q *Queries) error {
 		next, err := q.GetRateSlot(ctx, host)
 		if err != nil && err != sql.ErrNoRows {
 			return err
@@ -120,7 +119,7 @@ func (d *DB) MoveRateSlot(ctx context.Context, host string, notBefore time.Time)
 }
 
 func (d *DB) ReplaceCategories(ctx context.Context, categories []CategorySnapshot) error {
-	return d.WithTx(ctx, func(tx *sql.Tx, _ *generated.Queries) error {
+	return d.WithTx(ctx, func(tx *sql.Tx, _ *Queries) error {
 		if _, err := tx.ExecContext(ctx, `DELETE FROM category_snapshots`); err != nil {
 			return err
 		}
@@ -158,7 +157,7 @@ func (d *DB) ListCategories(ctx context.Context) ([]CategorySnapshot, error) {
 }
 
 func (d *DB) ReplaceFilters(ctx context.Context, categoryID string, filters []FilterSnapshot) error {
-	return d.WithTx(ctx, func(tx *sql.Tx, _ *generated.Queries) error {
+	return d.WithTx(ctx, func(tx *sql.Tx, _ *Queries) error {
 		if _, err := tx.ExecContext(ctx, `DELETE FROM filter_snapshots WHERE category_id=?`, categoryID); err != nil {
 			return err
 		}

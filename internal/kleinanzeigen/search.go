@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -43,16 +42,7 @@ func SearchAds(ctx context.Context, transport Transport, query map[string][]stri
 	}
 	requestContext, cancel := context.WithTimeout(ctx, 25*time.Second)
 	defer cancel()
-	response, err := transport.Do(Request{
-		Context:          requestContext,
-		Host:             HostMain,
-		Method:           http.MethodGet,
-		Path:             "/api/ads.json",
-		Query:            searchCloneQuery(query),
-		Class:            StableRead,
-		OneShot:          true,
-		MaxResponseBytes: JSONResponseLimit,
-	})
+	response, err := transport.Do(getJSONRequest(requestContext, "/api/ads.json", searchCloneQuery(query), StableRead, true))
 	if err != nil {
 		return SearchPage{}, err
 	}

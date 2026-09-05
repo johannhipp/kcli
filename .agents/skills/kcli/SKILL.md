@@ -1,5 +1,6 @@
 ---
 name: kcli
+version: 0.1.0
 description: Guardrails for driving the kcli Kleinanzeigen CLI from an agent — dry runs, field masks, structured output, confirmation bindings, cursors, and the fail-closed/never-live-test rules.
 ---
 
