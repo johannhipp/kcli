@@ -54,7 +54,8 @@ permission.
 
 ## Decisions fixed by this plan
 
-- Language: Go, with Go 1.26 as the minimum toolchain and Go 1.27 also tested.
+- Language: Go, with Go 1.26 as the minimum and the CI toolchain read from
+  `go.mod`; test Go 1.27 during release preparation.
 - Deliverable: one `kcli` executable; no required Python, browser runtime,
   Node.js, JVM, CGO, or resident service.
 - CLI parser: [`alecthomas/kong`](https://github.com/alecthomas/kong), using
@@ -98,7 +99,8 @@ permission or anti-automation constraint.
 
 ## Version and dependency policy
 
-Use `go 1.26` in `go.mod`; test the latest patch releases of Go 1.26 and 1.27.
+Use `go 1.26` in `go.mod`; ordinary CI uses that file's toolchain selection.
+Test the latest patch releases of Go 1.26 and 1.27 before release.
 Go supports the two most recent major releases, so the minimum must be reviewed
 whenever a new Go release lands. Commit `go.mod` and `go.sum`. Pin tools using the
 Go tool directive where supported, and let dependency update automation open
@@ -140,8 +142,8 @@ operation.
 | [`rogpeppe/go-internal/testscript`](https://github.com/rogpeppe/go-internal/tree/master/testscript) | `v1.16.0` | Exercise the compiled CLI, streams, files, exit codes, and environment in txtar fixtures |
 | [`google/go-cmp`](https://github.com/google/go-cmp) | `v0.7.0` | Readable structural diffs in parser and normalization tests |
 | [`GoReleaser`](https://goreleaser.com/) | pin in CI | Reproducible archives, checksums, SBOMs, Homebrew metadata, and release snapshots |
-| [`govulncheck`](https://go.dev/security/vuln/) | pin in CI | Reachability-aware Go vulnerability scanning |
-| `staticcheck` | pin in CI | Static analysis beyond `go vet` |
+| [`govulncheck`](https://go.dev/security/vuln/) | pin in Makefile | Reachability-aware Go vulnerability scanning via `make lint` |
+| `staticcheck` | pin in Makefile | Static analysis beyond `go vet` via `make lint` |
 
 SQLite queries use hand-written typed methods in `internal/state/store.go`; there is no SQL code generator (the account, cursor, confirmation, and reconciliation queries are domain-shaped and reference SQLite internals a generator cannot resolve). Do not introduce Viper, a DI
 container, an ORM, a logging framework, an HTTP framework, or a second schema
@@ -1282,26 +1284,26 @@ Human table output strips or visibly escapes terminal control sequences.
 Structured output preserves safe Unicode data exactly. Remote prose is never
 rendered to stderr as an instruction.
 
-### CI lanes
+### CI
 
-On every pull request:
+On every pull request and push to `main`, one Linux job runs:
 
 ```text
-python3 scripts/check_docs.py
-gofmt check
-go mod verify
-go generate ./... && git diff --exit-code
-go vet ./...
-staticcheck ./...
-go test -race ./...
-govulncheck ./...
-goreleaser check
-goreleaser release --snapshot --clean
+make check
 ```
 
-Run the full race lane on Linux and targeted unit/integration lanes on current
-macOS and Windows. Cross-compile darwin/linux/windows for amd64/arm64 on every
-release-candidate change. Network tests are excluded from ordinary CI. A manual
+The target checks formatting, module integrity, builds, `go vet`, race-enabled
+tests with the `testing` tag and shuffled order, documentation contracts, and
+repository script tests. CI reads the Go version from `go.mod` and cancels
+superseded runs on the same ref.
+
+This replaces the separate docs/lint jobs and six-job cross-build matrix.
+`make lint` (staticcheck and govulncheck) and `make cross` (darwin/linux/windows
+for amd64/arm64) remain available locally and for release preparation. Targeted
+macOS/Windows integration checks and GoReleaser validation/snapshots are release
+checks, not per-PR jobs.
+
+Network tests are excluded from ordinary CI. A manual
 workflow may use release secrets only when recorded written permission covers
 that workflow and an operator explicitly starts it; logs and artifacts pass
 redaction checks.

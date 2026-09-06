@@ -49,6 +49,9 @@ The first planned release is `0.1.0`. There are no tagged releases yet.
 
 ### Changed
 
+- Simplified CI to one Linux job running `make check` for pull requests and
+  pushes to `main`; linting and cross-compilation remain optional local commands
+  and release checks. Go setup follows `go.mod`, and superseded runs are cancelled.
 - Classified the comprehensive web user-story inventory as the long-term backlog
   rather than the v0.1 implementation boundary.
 - Clarified that kcli exposes browser-equivalent CLI primitives. Pickup,

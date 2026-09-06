@@ -18,22 +18,21 @@ the code in agreement without silently expanding v0.1.
 ## Workflow
 
 Create a focused branch, make one coherent change, and update the relevant
-contract documents in the same commit. Before opening a pull request, run:
+contract documents in the same commit. Before opening a pull request, run the
+same checks as CI:
 
 ```bash
-python3 scripts/check_docs.py
+make check
 ```
 
-For Go changes, also run the relevant unit/smoke tests and the repository
-checks documented in
-[the implementation plan](docs/implementation-plan.md), at minimum:
+This checks formatting, module integrity, builds, vet, race-enabled tests,
+documentation contracts, and repository script tests in one Linux CI job.
+Run focused unit/smoke tests as needed while developing. Additional checks are
+available locally and for release preparation:
 
 ```bash
-gofmt -l .            # must be empty
-go mod verify
-go build ./...
-go vet ./...
-go test -tags testing -race ./...
+make lint            # staticcheck and govulncheck
+make cross           # six release targets
 ```
 
 ## Commits
