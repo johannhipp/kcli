@@ -4,7 +4,7 @@
 GO ?= go
 GOTESTFLAGS := -tags testing -race -shuffle=on
 
-.PHONY: build test vet lint fmt check-docs check cross clean
+.PHONY: build test vet verify lint fmt check-docs check cross clean
 
 build:
 	$(GO) build ./...
@@ -15,6 +15,9 @@ test:
 vet:
 	$(GO) vet ./...
 
+verify:
+	$(GO) mod verify
+
 lint:
 	$(GO) run honnef.co/go/tools/cmd/staticcheck@v0.8.1 ./...
 	$(GO) run golang.org/x/vuln/cmd/govulncheck@v1.7.0 ./...
@@ -24,8 +27,9 @@ fmt:
 
 check-docs:
 	python3 scripts/check_docs.py
+	python3 -m unittest discover -s scripts -p 'test_*.py'
 
-check: fmt vet test lint check-docs
+check: fmt verify build vet test check-docs
 
 cross:
 	for os in darwin linux windows; do \

@@ -39,7 +39,8 @@ All offline work is complete, green, and committed (merged via PR #1 as
 - [x] **DM — sync** — resumable list-only `dm poll` + foreground NDJSON
   `dm watch` (DB-validated cursors, at-least-once events, sync lease,
   SIGINT/SIGTERM handling).
-- [x] **Hardening** — staticcheck/govulncheck/cross-compile CI lanes, `go`
+- [x] **Hardening** — staticcheck/govulncheck/cross-compile checks (originally
+  CI lanes, now local/release checks; see [CI](implementation-plan.md#ci)), `go`
   toolchain pin (no stdlib vulns), installable kcli agent skill, fuzz targets
   + a CLI testscript scenario, README/CONTRIBUTING/docs/CHANGELOG consistency.
 
