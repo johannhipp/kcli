@@ -12,8 +12,8 @@ require (
 	github.com/pressly/goose/v3 v3.28.0
 	github.com/rogpeppe/go-internal v1.16.0
 	github.com/zalando/go-keyring v0.2.8
-	golang.org/x/sys v0.47.0
-	golang.org/x/term v0.45.0
+	golang.org/x/sys v0.48.0
+	golang.org/x/term v0.46.0
 	golang.org/x/text v0.41.0
 	modernc.org/sqlite v1.58.0
 )
