@@ -18,7 +18,11 @@ kcli [--profile NAME] [--output FORMAT] [--fields LIST]
 default to a compact table or readable object. Non-TTY finite commands default
 to one JSON envelope, including during pagination; event streams default to
 NDJSON. Explicit finite NDJSON ends with a `kcli.summary/v1` line so stop and
-count metadata is not lost. Diagnostics always go to stderr. `--fields` accepts
+count metadata is not lost. The summary retains source, completeness, page,
+continuation, warnings, request ID and observation time regardless of `--fields`.
+Field masks project result rows; a mask omitting `data` emits only the summary.
+Its `returned` count is the number of emitted rows, while `page` describes the
+underlying search result. Diagnostics always go to stderr. `--fields` accepts
 comma-separated schema paths and is available on every read command. Arbitrary
 projection remains composable through an external `jq` process.
 
