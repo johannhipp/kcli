@@ -169,17 +169,19 @@ func execute(ctx context.Context, args []string, stdin io.Reader, stdout, stderr
 		}
 		runtime.Config = store
 		effective, err := store.List(root.Profile)
-		if err != nil {
+		if err != nil && selected != "doctor" && selected != "version" && selected != "config path" {
 			return fail(runtime, &domain.Error{Code: domain.CodeInvalidInput, Message: err.Error(), Cause: err}, true)
 		}
-		if root.Output == "" && effective["output"].Value != "auto" {
-			runtime.Encoder.Format, _ = output.ParseFormat(effective["output"].Value)
-		}
-		if !root.Quiet {
-			runtime.Quiet, _ = strconv.ParseBool(effective["quiet"].Value)
-		}
-		if root.Timeout == 0 {
-			root.Timeout, _ = time.ParseDuration(effective["timeout"].Value)
+		if err == nil {
+			if root.Output == "" && effective["output"].Value != "auto" {
+				runtime.Encoder.Format, _ = output.ParseFormat(effective["output"].Value)
+			}
+			if !root.Quiet {
+				runtime.Quiet, _ = strconv.ParseBool(effective["quiet"].Value)
+			}
+			if root.Timeout == 0 {
+				root.Timeout, _ = time.ParseDuration(effective["timeout"].Value)
+			}
 		}
 	}
 	if requiresRemoteState(selected) {
@@ -253,7 +255,7 @@ func selectedPath(node *kong.Node) string {
 }
 
 func requiresRemoteState(path string) bool {
-	return path == "doctor" || path == "schema filters" || strings.HasPrefix(path, "category ") ||
+	return path == "schema filters" || strings.HasPrefix(path, "category ") ||
 		strings.HasPrefix(path, "location ") ||
 		strings.HasPrefix(path, "filter ") ||
 		path == "search" ||
