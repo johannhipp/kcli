@@ -5,6 +5,12 @@ Release automation moves pending entries into a dated section when publishing.
 
 ## [Unreleased]
 
+## [0.1.8] - 2026-09-18
+
+### Changed
+
+- fix(output): propagate table flush failures (#20) (8f9be59)
+
 ## [0.1.7] - 2026-09-18
 
 ### Changed
@@ -96,7 +102,8 @@ Release automation moves pending entries into a dated section when publishing.
   reads, recognize commercial-listing seller IDs, and preserve relative image
   output paths through CLI parsing.
 
-[Unreleased]: https://github.com/johannhipp/kcli/compare/v0.1.7...HEAD
+[Unreleased]: https://github.com/johannhipp/kcli/compare/v0.1.8...HEAD
+[0.1.8]: https://github.com/johannhipp/kcli/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/johannhipp/kcli/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/johannhipp/kcli/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/johannhipp/kcli/compare/v0.1.4...v0.1.5
