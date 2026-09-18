@@ -5,6 +5,8 @@ Release automation moves pending entries into a dated section when publishing.
 
 ## [Unreleased]
 
+## [0.1.11] - 2026-09-18
+
 ### Changed
 
 - Expand the concise agent skill with launch methods, command discovery and bounded usage guidance.
@@ -122,7 +124,8 @@ Release automation moves pending entries into a dated section when publishing.
   reads, recognize commercial-listing seller IDs, and preserve relative image
   output paths through CLI parsing.
 
-[Unreleased]: https://github.com/johannhipp/kcli/compare/v0.1.10...HEAD
+[Unreleased]: https://github.com/johannhipp/kcli/compare/v0.1.11...HEAD
+[0.1.11]: https://github.com/johannhipp/kcli/compare/v0.1.10...v0.1.11
 [0.1.10]: https://github.com/johannhipp/kcli/compare/v0.1.9...v0.1.10
 [0.1.9]: https://github.com/johannhipp/kcli/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/johannhipp/kcli/compare/v0.1.7...v0.1.8
