@@ -5,6 +5,13 @@ Release automation moves pending entries into a dated section when publishing.
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-09-18
+
+### Changed
+
+- fix(cli): keep recovery commands usable with broken local files (#18) (a42ee00)
+- fix(state): enforce seller retention for search indexing (#17) (84def96)
+
 ## [0.1.5] - 2026-09-18
 
 ### Changed
@@ -79,7 +86,8 @@ Release automation moves pending entries into a dated section when publishing.
   reads, recognize commercial-listing seller IDs, and preserve relative image
   output paths through CLI parsing.
 
-[Unreleased]: https://github.com/johannhipp/kcli/compare/v0.1.5...HEAD
+[Unreleased]: https://github.com/johannhipp/kcli/compare/v0.1.6...HEAD
+[0.1.6]: https://github.com/johannhipp/kcli/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/johannhipp/kcli/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/johannhipp/kcli/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/johannhipp/kcli/compare/v0.1.2...v0.1.3
