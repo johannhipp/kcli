@@ -5,6 +5,10 @@ Release automation moves pending entries into a dated section when publishing.
 
 ## [Unreleased]
 
+### Fixed
+
+- Stop queued public requests when another process records a rate-limit cooldown.
+
 ## [0.1.1] - 2026-09-18
 
 ### Changed

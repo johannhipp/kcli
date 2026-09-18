@@ -245,7 +245,7 @@ type webRateRecorder struct {
 func (r *webRateRecorder) ReserveRateSlot(context.Context, string, time.Time, time.Duration, time.Duration) (time.Duration, error) {
 	return 0, nil
 }
-func (r *webRateRecorder) MoveRateSlot(_ context.Context, host string, until time.Time) error {
+func (r *webRateRecorder) SetRateCooldown(_ context.Context, host string, until time.Time) error {
 	r.host = host
 	r.until = until
 	return nil
@@ -341,3 +341,5 @@ func TestWebFilterStateObservedConditionAlias(t *testing.T) {
 		t.Fatal("inferred an unverified alias")
 	}
 }
+
+func (r *webRateRecorder) CheckRateCooldown(context.Context, string, time.Time) error { return nil }

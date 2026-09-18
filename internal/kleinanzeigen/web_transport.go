@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"math/rand/v2"
 	"net/http"
 	"net/url"
 	"strings"
@@ -23,7 +22,7 @@ const publicWebOrigin = "https://www.kleinanzeigen.de"
 type WebTransport struct {
 	client      *http.Client
 	database    *state.DB
-	rate        rateStore
+	rate        webRateStore
 	clock       policyClock
 	mu          sync.Mutex
 	next        time.Time
@@ -40,31 +39,6 @@ func NewWebTransport(database *state.DB) *WebTransport {
 	return t
 }
 func (*WebTransport) Source() string { return "public-web" }
-func (t *WebTransport) reserve(ctx context.Context) error {
-	jitter := time.Duration(rand.IntN(251)) * time.Millisecond
-	var wait time.Duration
-	if t.rate != nil {
-		var err error
-		wait, err = t.rate.ReserveRateSlot(ctx, "www.kleinanzeigen.de", t.clock.Now(), jitter, 30*time.Second)
-		if err != nil {
-			return err
-		}
-	} else {
-		t.mu.Lock()
-		now := t.clock.Now()
-		if t.next.After(now) {
-			wait = t.next.Sub(now)
-		}
-		t.next = now.Add(wait + 2500*time.Millisecond + jitter)
-		t.mu.Unlock()
-	}
-	if wait > 0 {
-		if err := t.clock.Sleep(ctx, wait); err != nil {
-			return contextOperationError(err)
-		}
-	}
-	return nil
-}
 func webURL(raw string) (*url.URL, error) {
 	u, err := url.Parse(raw)
 	if err != nil || u.Scheme != "https" || u.Host != "www.kleinanzeigen.de" || u.User != nil || u.Fragment != "" {
@@ -254,17 +228,6 @@ func transportSource(transport Transport) string {
 		return source.Source()
 	}
 	return "mobile-api"
-}
-
-func (t *WebTransport) persistCooldown(ctx context.Context, response Response) error {
-	if response.StatusCode != http.StatusTooManyRequests || t.rate == nil {
-		return nil
-	}
-	delay := retryDelay(response.Headers, 0, t.clock.Now())
-	if delay < time.Minute {
-		delay = time.Minute
-	}
-	return t.rate.MoveRateSlot(ctx, "www.kleinanzeigen.de", t.clock.Now().Add(delay))
 }
 
 // Website errors intentionally omit HTML response bodies: these may contain
