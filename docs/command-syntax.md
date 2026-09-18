@@ -139,7 +139,10 @@ kcli version                                               # v0.1
 Schemas describe flags, JSON input, output fields, enums, required auth scope,
 side effects, confirmation requirements, and whether an upstream contract is
 live-proven. `doctor` checks local configuration, disk and state health. `--network` makes
-a paced public category request. No login, keyring, or credentials are needed.
+a paced public category request. No login, keyring, or credentials are needed. `doctor`, `version`, and `config
+path` fall back to CLI defaults when the configuration cannot be read. Doctor
+reports broken configuration and state as individual checks; `--network` is
+skipped when state is unavailable because safe pacing requires it.
 
 Raw-payload fields describe arbitrary JSON values in runtime schemas, matching
 their actual output; they are not arrays of byte integers.
