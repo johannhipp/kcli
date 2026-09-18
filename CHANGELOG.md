@@ -5,6 +5,12 @@ Release automation moves pending entries into a dated section when publishing.
 
 ## [Unreleased]
 
+## [0.1.10] - 2026-09-18
+
+### Changed
+
+- fix(media): anchor downloads to directory handles (#22) (7800664)
+
 ## [0.1.9] - 2026-09-18
 
 ### Changed
@@ -112,7 +118,8 @@ Release automation moves pending entries into a dated section when publishing.
   reads, recognize commercial-listing seller IDs, and preserve relative image
   output paths through CLI parsing.
 
-[Unreleased]: https://github.com/johannhipp/kcli/compare/v0.1.9...HEAD
+[Unreleased]: https://github.com/johannhipp/kcli/compare/v0.1.10...HEAD
+[0.1.10]: https://github.com/johannhipp/kcli/compare/v0.1.9...v0.1.10
 [0.1.9]: https://github.com/johannhipp/kcli/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/johannhipp/kcli/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/johannhipp/kcli/compare/v0.1.6...v0.1.7
