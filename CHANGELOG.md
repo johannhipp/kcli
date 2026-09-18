@@ -5,6 +5,12 @@ Release automation moves pending entries into a dated section when publishing.
 
 ## [Unreleased]
 
+## [0.1.7] - 2026-09-18
+
+### Changed
+
+- fix(output): preserve NDJSON metadata when projecting fields (#19) (47c4ba0)
+
 ## [0.1.6] - 2026-09-18
 
 ### Changed
@@ -88,7 +94,8 @@ Release automation moves pending entries into a dated section when publishing.
   reads, recognize commercial-listing seller IDs, and preserve relative image
   output paths through CLI parsing.
 
-[Unreleased]: https://github.com/johannhipp/kcli/compare/v0.1.6...HEAD
+[Unreleased]: https://github.com/johannhipp/kcli/compare/v0.1.7...HEAD
+[0.1.7]: https://github.com/johannhipp/kcli/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/johannhipp/kcli/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/johannhipp/kcli/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/johannhipp/kcli/compare/v0.1.3...v0.1.4
