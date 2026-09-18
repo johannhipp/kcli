@@ -209,6 +209,13 @@ func (t *WebTransport) OpenMedia(input Request) (MediaResponse, error) {
 		cancel()
 		return MediaResponse{}, &domain.Error{Code: domain.CodeConnectivity, Message: "public image request failed; no retry was attempted", Cause: err}
 	}
+	// Return redirect metadata to the downloader, which validates every target
+	// and enforces the redirect bound. Redirect bodies are never consumed.
+	if resp.StatusCode >= 300 && resp.StatusCode < 400 {
+		resp.Body.Close()
+		cancel()
+		return MediaResponse{StatusCode: resp.StatusCode, Headers: cloneHeaders(resp.Header), Body: io.NopCloser(strings.NewReader(""))}, nil
+	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		resp.Body.Close()
 		response := Response{StatusCode: resp.StatusCode, Headers: cloneHeaders(resp.Header)}
