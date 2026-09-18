@@ -147,7 +147,16 @@ func TestDownloadInterruptionLeavesNoOwnedTemporaryFile(t *testing.T) {
 	root := t.TempDir()
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	err := listingWriteAtomic(ctx, filepath.Join(root, "image.png"), []byte("\x89PNG\r\n\x1a\n"), false)
+	canonical, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	directory, err := openDownloadDirectory(canonical)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer directory.Close()
+	err = directory.writeAtomic(ctx, "image.png", []byte("\x89PNG\r\n\x1a\n"), false)
 	var typed *domain.Error
 	if !errors.As(err, &typed) || typed.Code != domain.CodeInterrupted {
 		t.Fatalf("error=%#v", err)

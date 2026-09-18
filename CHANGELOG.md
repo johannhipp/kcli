@@ -46,6 +46,8 @@ Release automation moves pending entries into a dated section when publishing.
 
 ### Fixed
 
+- Anchor image writes to an opened directory and reject directory replacement during downloads.
+
 - Include state initialization and SQLite lock waiting in the command timeout.
 
 - Report buffered table-output write failures instead of returning success.
