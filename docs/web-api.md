@@ -84,7 +84,9 @@ See [test-results.md](test-results.md) for the current Go CLI acceptance evidenc
 The client has no cookie jar and sends no authorization headers. Every outgoing
 read, including redirects and image fetches, uses shared SQLite request pacing.
 Responses are bounded; operation deadlines include waiting. There are no retries
-on challenges or rate limits. Redirects remain on the exact public website host;
+on challenges or rate limits. Persisted cooldowns are checked before reserving
+and immediately before dispatch, including requests already waiting in another
+process. Redirects remain on the exact public website host;
 media starts from exact returned URLs on `img.kleinanzeigen.de`; redirects are
 bounded and must remain on that exact image host.
 
