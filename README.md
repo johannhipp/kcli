@@ -38,7 +38,8 @@ kcli doctor
 
 Use an actual listing URL returned by search. Piped output is JSON; interactive
 output is a table. `--output json`, `--fields`, `--input`, and `--help` support
-scripts and agents. `schema list` exposes every supported operation.
+scripts and agents. `schema list` exposes every supported operation. Agents can start with the
+[concise kcli skill](.agents/skills/kcli/SKILL.md).
 
 Seller-name search covers locally encountered sellers, not a global directory.
 The website controls pagination sizes. Unsupported filters fail explicitly;

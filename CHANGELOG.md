@@ -5,6 +5,10 @@ Release automation moves pending entries into a dated section when publishing.
 
 ## [Unreleased]
 
+### Changed
+
+- Expand the concise agent skill with launch methods, command discovery and bounded usage guidance.
+
 ## [0.1.10] - 2026-09-18
 
 ### Changed
