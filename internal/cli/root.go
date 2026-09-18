@@ -184,10 +184,21 @@ func execute(ctx context.Context, args []string, stdin io.Reader, stdout, stderr
 			}
 		}
 	}
+	if root.Timeout == 0 {
+		root.Timeout = 25 * time.Second
+	}
+	if root.Timeout < 0 || root.Timeout > 60*time.Second {
+		return fail(runtime, &domain.Error{Code: domain.CodeInvalidInput, Message: "timeout must be no greater than 60s"}, true)
+	}
+	if root.Timeout > 0 {
+		deadlineContext, cancel := context.WithTimeout(runtime.Context, root.Timeout)
+		defer cancel()
+		runtime.Context = deadlineContext
+	}
 	if requiresRemoteState(selected) {
 		database, err := state.Open(runtime.Context, runtime.Paths.StateDB)
 		if err != nil {
-			return fail(runtime, &domain.Error{Code: domain.CodeUnavailable, Message: "open profile state", Cause: err}, false)
+			return fail(runtime, stateInitializationError(runtime.Context, err), false)
 		}
 		defer database.Close()
 		deps := app.Dependencies{Transport: kleinanzeigen.NewWebTransport(database), State: database}
@@ -222,14 +233,6 @@ func execute(ctx context.Context, args []string, stdin io.Reader, stdout, stderr
 				return fail(runtime, invalidError(err), true)
 			}
 		}
-	}
-	if root.Timeout < 0 || root.Timeout > 60*time.Second {
-		return fail(runtime, &domain.Error{Code: domain.CodeInvalidInput, Message: "timeout must be no greater than 60s"}, true)
-	}
-	if root.Timeout > 0 {
-		deadlineContext, cancel := context.WithTimeout(runtime.Context, root.Timeout)
-		defer cancel()
-		runtime.Context = deadlineContext
 	}
 	if runtime.Debug {
 		if meta, ok := catalog.Find(selected); ok {

@@ -27,7 +27,9 @@ comma-separated schema paths and is available on every read command. Arbitrary
 projection remains composable through an external `jq` process.
 
 All durations use explicit suffixes such as `30s`, `5m`, or `1h`. `--timeout`
-may lower but never raise the documented operation ceiling. Every command
+may lower but never raise the documented operation ceiling. Its deadline starts
+before state initialization; SQLite lock waits are capped by the remaining
+budget. Initialization timeout returns exit 5. Every command
 supports `--help`; `kcli schema show` provides the machine-readable equivalent.
 No daemon or background polling is included.
 

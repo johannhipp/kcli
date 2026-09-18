@@ -36,7 +36,17 @@ func Open(ctx context.Context, path string) (*DB, error) {
 		return nil, fmt.Errorf("create state directory: %w", err)
 	}
 	u := &url.URL{Scheme: "file", Path: filepath.ToSlash(path)}
-	dsn := u.String() + "?_pragma=foreign_keys(1)&_pragma=busy_timeout(5000)&_pragma=synchronous(FULL)&_txlock=immediate"
+	busyTimeout := 5 * time.Second
+	if deadline, ok := ctx.Deadline(); ok {
+		busyTimeout = min(busyTimeout, time.Until(deadline))
+		if busyTimeout <= 0 {
+			return nil, context.DeadlineExceeded
+		}
+	}
+	// SQLite's busy handler can outlive context cancellation. Bound its wait by
+	// the remaining command budget as well, rounding up to whole milliseconds.
+	busyMS := int64((busyTimeout + time.Millisecond - 1) / time.Millisecond)
+	dsn := u.String() + fmt.Sprintf("?_pragma=foreign_keys(1)&_pragma=busy_timeout(%d)&_pragma=synchronous(FULL)&_txlock=immediate", busyMS)
 	sqldb, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("open state database: %w", err)
