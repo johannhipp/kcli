@@ -34,6 +34,8 @@ Release automation moves pending entries into a dated section when publishing.
 
 ### Fixed
 
+- Report buffered table-output write failures instead of returning success.
+
 - Preserve NDJSON source, completeness, pagination, and warnings independently of field projection.
 
 - Keep doctor, version, and config path available with malformed local configuration or state.
