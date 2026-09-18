@@ -23,7 +23,7 @@ type downloadDirectory struct {
 }
 
 func openDownloadDirectory(path string) (*downloadDirectory, error) {
-	const flags = unix.O_RDONLY | unix.O_DIRECTORY | unix.O_NOFOLLOW | unix.O_CLOEXEC
+	const flags = directorySearchFlag | unix.O_DIRECTORY | unix.O_NOFOLLOW | unix.O_CLOEXEC
 	fd, err := unix.Open(string(filepath.Separator), flags, 0)
 	if err != nil {
 		return nil, err
@@ -46,12 +46,18 @@ func openDownloadDirectory(path string) (*downloadDirectory, error) {
 		}
 		fd = next
 	}
-	file := os.NewFile(uintptr(fd), path)
-	if err := file.Chmod(0700); err != nil {
-		file.Close()
+	// Search handles preserve traversal through ancestors without list permission.
+	// Restore permissions through the held directory before opening it for I/O.
+	if err := unix.Fchmodat(fd, ".", 0700, 0); err != nil {
+		unix.Close(fd)
 		return nil, err
 	}
-	return &downloadDirectory{file: file, path: path}, nil
+	readFD, err := unix.Openat(fd, ".", unix.O_RDONLY|unix.O_DIRECTORY|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
+	unix.Close(fd)
+	if err != nil {
+		return nil, err
+	}
+	return &downloadDirectory{file: os.NewFile(uintptr(readFD), path), path: path}, nil
 }
 
 func (d *downloadDirectory) Close() error { return d.file.Close() }

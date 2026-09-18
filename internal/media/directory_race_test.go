@@ -85,3 +85,37 @@ func TestConcurrentDownloadsNeverClobber(t *testing.T) {
 		t.Fatalf("leftover files=%v err=%v", entries, err)
 	}
 }
+
+func TestDownloadThroughSearchOnlyDirectories(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root bypasses directory permissions")
+	}
+	base, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	ancestor := filepath.Join(base, "ancestor")
+	output := filepath.Join(ancestor, "downloads")
+	if err := os.MkdirAll(output, 0700); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(ancestor, 0700); _ = os.Chmod(output, 0700) })
+	if err := os.Chmod(output, 0300); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(ancestor, 0111); err != nil {
+		t.Fatal(err)
+	}
+	directory, err := openDownloadDirectory(output)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer directory.Close()
+	if err := directory.writeAtomic(context.Background(), "image.png", []byte("fixture"), false); err != nil {
+		t.Fatal(err)
+	}
+	body, err := os.ReadFile(filepath.Join(output, "image.png"))
+	if err != nil || string(body) != "fixture" {
+		t.Fatalf("body=%q err=%v", body, err)
+	}
+}
