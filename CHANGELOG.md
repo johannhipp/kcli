@@ -5,6 +5,11 @@ Release automation moves pending entries into a dated section when publishing.
 
 ## [Unreleased]
 
+### Changed
+
+- Require draft PRs for repository changes, focused checkpoint commits, concise
+  maintained PR descriptions, and PR/diff links after substantial milestones.
+
 ## [0.1.0] - 2026-09-18
 
 ### Added

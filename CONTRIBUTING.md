@@ -22,6 +22,11 @@ Do not commit captures, credentials, tokens or personal data.
 
 ## Commits and releases
 
+Follow the [draft PR workflow](AGENTS.md#draft-pr-workflow): open a draft against
+`main` early, push focused checkpoint commits, and keep the four-field PR
+description current. Agent milestone updates must link both the PR and its diff
+against `main`.
+
 Use Conventional Commits: `type(scope): imperative summary`, such as
 `fix(search): retain pagination metadata` or `feat(filters): support ranges`.
 Use `!` and a `BREAKING CHANGE:` footer for breaking contracts. The optional
