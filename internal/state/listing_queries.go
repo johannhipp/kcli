@@ -9,11 +9,6 @@ import (
 	"time"
 )
 
-const (
-	listingSellerRetention = 30 * 24 * time.Hour
-	listingSellerMaximum   = 10_000
-)
-
 type SellerSnapshot struct {
 	ID           string
 	FoldedName   string
@@ -50,12 +45,7 @@ func (d *DB) UpsertPublicSeller(ctx context.Context, seller SellerSnapshot) erro
 		if _, err := tx.ExecContext(ctx, `INSERT INTO sellers(seller_id,folded_name,display_name,public_json,source,completeness,observed_at) VALUES(?,?,?,?,?,?,?) ON CONFLICT(seller_id) DO UPDATE SET folded_name=excluded.folded_name,display_name=excluded.display_name,public_json=excluded.public_json,source=excluded.source,completeness=excluded.completeness,observed_at=excluded.observed_at`, seller.ID, seller.FoldedName, seller.DisplayName, []byte(seller.PublicJSON), seller.Source, seller.Completeness, observed); err != nil {
 			return err
 		}
-		cutoff := seller.ObservedAt.UTC().Add(-listingSellerRetention).Format(time.RFC3339Nano)
-		if _, err := tx.ExecContext(ctx, `DELETE FROM sellers WHERE observed_at < ?`, cutoff); err != nil {
-			return err
-		}
-		_, err := tx.ExecContext(ctx, `DELETE FROM sellers WHERE seller_id IN (SELECT seller_id FROM sellers ORDER BY observed_at DESC,seller_id LIMIT -1 OFFSET ?)`, listingSellerMaximum)
-		return err
+		return pruneSellers(ctx, tx, seller.ObservedAt)
 	})
 }
 
@@ -74,12 +64,7 @@ func (d *DB) UpsertSellerListing(ctx context.Context, seller SellerSnapshot, lis
 		if _, err := tx.ExecContext(ctx, `INSERT INTO seller_listings(seller_id,listing_id,title,status,url,observed_at) VALUES(?,?,?,?,?,?) ON CONFLICT(seller_id,listing_id) DO UPDATE SET title=excluded.title,status=excluded.status,url=excluded.url,observed_at=excluded.observed_at`, listing.SellerID, listing.ListingID, listing.Title, listing.Status, listing.URL, listing.ObservedAt.UTC().Format(time.RFC3339Nano)); err != nil {
 			return err
 		}
-		cutoff := seller.ObservedAt.UTC().Add(-listingSellerRetention).Format(time.RFC3339Nano)
-		if _, err := tx.ExecContext(ctx, `DELETE FROM sellers WHERE observed_at < ?`, cutoff); err != nil {
-			return err
-		}
-		_, err := tx.ExecContext(ctx, `DELETE FROM sellers WHERE seller_id IN (SELECT seller_id FROM sellers ORDER BY observed_at DESC,seller_id LIMIT -1 OFFSET ?)`, listingSellerMaximum)
-		return err
+		return pruneSellers(ctx, tx, seller.ObservedAt)
 	})
 }
 

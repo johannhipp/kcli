@@ -35,9 +35,13 @@ func (d *DB) SearchUpsertSellers(ctx context.Context, records []SearchSellerReco
 		return fmt.Errorf("state database is unavailable")
 	}
 	return d.WithTx(ctx, func(tx *sql.Tx, _ *Queries) error {
+		var newest time.Time
 		for _, record := range records {
 			if record.SellerID == "" || record.ListingID == "" {
 				continue
+			}
+			if record.ObservedAt.After(newest) {
+				newest = record.ObservedAt
 			}
 			var previousName, previousSource, previousCompleteness string
 			var previousJSON []byte
@@ -77,7 +81,10 @@ func (d *DB) SearchUpsertSellers(ctx context.Context, records []SearchSellerReco
 				return fmt.Errorf("upsert seller listing %q: %w", record.ListingID, err)
 			}
 		}
-		return nil
+		if newest.IsZero() {
+			return nil
+		}
+		return pruneSellers(ctx, tx, newest)
 	})
 }
 
