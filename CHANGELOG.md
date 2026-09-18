@@ -21,6 +21,8 @@ Release automation moves pending entries into a dated section when publishing.
 
 ### Fixed
 
+- Classify malformed or unsupported website hydration as a safe upstream-contract error.
+
 - Preserve website search continuation and label within-page result truncation.
 
 - Follow bounded same-host image redirects through the production web transport.

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/johannhipp/kcli/internal/domain"
+
 	"golang.org/x/net/html"
 )
 
@@ -77,7 +79,10 @@ func webProps(doc *html.Node) ([]map[string]any, error) {
 		}
 		out = append(out, props)
 	})
-	return out, firstErr
+	if firstErr != nil {
+		return nil, &domain.Error{Code: domain.CodeUpstreamContract, Message: "public website hydration could not be decoded", Cause: firstErr}
+	}
+	return out, nil
 }
 func webAstro(value any) (any, error) {
 	tagged, ok := value.([]any)
