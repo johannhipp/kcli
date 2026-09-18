@@ -72,12 +72,15 @@ func (a *App) Search(ctx context.Context, input domain.SearchInputV1) (domain.Se
 	stopReason := ""
 	var lastTotal int
 	var totalKnown bool
+	var continuation *kleinanzeigen.SearchContinuation
+	truncated := false
 	for {
 		query["page"] = []string{strconv.Itoa(pageNumber)}
 		page, fetchErr := kleinanzeigen.SearchAds(ctx, a.Transport, query)
 		if fetchErr != nil {
 			return domain.SearchOutputV1{}, fetchErr
 		}
+		continuation = page.Continuation
 		warnings = append(warnings, page.Warnings...)
 		fetched += len(page.Listings)
 		if page.TotalKnown {
@@ -88,7 +91,7 @@ func (a *App) Search(ctx context.Context, input domain.SearchInputV1) (domain.Se
 			return domain.SearchOutputV1{}, &domain.Error{Code: domain.CodeUnavailable, Message: "index search sellers", Cause: err}
 		}
 		newIDs := 0
-		for _, listing := range page.Listings {
+		for index, listing := range page.Listings {
 			if _, duplicate := seen[listing.Summary.ID]; duplicate {
 				continue
 			}
@@ -101,6 +104,7 @@ func (a *App) Search(ctx context.Context, input domain.SearchInputV1) (domain.Se
 			summary.ObservedAt = observedAt
 			listings = append(listings, summary)
 			if len(listings) == canonical.Limit {
+				truncated = index+1 < len(page.Listings)
 				break
 			}
 		}
@@ -120,6 +124,8 @@ func (a *App) Search(ctx context.Context, input domain.SearchInputV1) (domain.Se
 			stopReason = "scan_bound"
 		case page.TotalKnown && (pageNumber+1)*canonical.PageSize >= page.Total:
 			stopReason = "known_total"
+		case continuation != nil && continuation.Next == nil:
+			stopReason = "end_of_results"
 		case !canonical.Paginate:
 			stopReason = "single_page"
 		}
@@ -127,8 +133,14 @@ func (a *App) Search(ctx context.Context, input domain.SearchInputV1) (domain.Se
 			break
 		}
 		pageNumber++
+		if continuation != nil && continuation.Next != nil {
+			pageNumber = *continuation.Next
+		}
 	}
 
+	if truncated {
+		warnings = append(warnings, domain.WarningV1{Code: "page_truncated", Message: "result limit truncated a website page; rerun this page with a larger limit before advancing", Details: map[string]any{"page": pageNumber}})
+	}
 	metadataDetails := map[string]any{"stop_reason": stopReason, "canonical_input": canonical}
 	if totalKnown {
 		metadataDetails["total"] = lastTotal
@@ -148,7 +160,10 @@ func (a *App) Search(ctx context.Context, input domain.SearchInputV1) (domain.Se
 	if stopReason == "scan_bound" {
 		envelope.Completeness = domain.CompletenessPartial
 	}
-	if !canonical.Paginate && stopReason == "single_page" {
+	if !truncated && continuation != nil && continuation.Next != nil {
+		next := strconv.Itoa(*continuation.Next)
+		envelope.Next = &next
+	} else if !truncated && continuation == nil && !canonical.Paginate && stopReason == "single_page" {
 		next := strconv.Itoa(canonical.Page + 1)
 		envelope.Next = &next
 	}

@@ -27,14 +27,6 @@ type SearchListing struct {
 	Seller      SearchSeller
 }
 
-// SearchPage is one decoded page from /api/ads.json.
-type SearchPage struct {
-	Listings   []SearchListing
-	Total      int
-	TotalKnown bool
-	Warnings   []domain.WarningV1
-}
-
 // SearchAds performs and decodes one bounded anonymous mobile search request.
 func SearchAds(ctx context.Context, transport Transport, query map[string][]string) (SearchPage, error) {
 	if transport == nil {
@@ -75,6 +67,16 @@ func SearchParsePage(raw []byte) (SearchPage, error) {
 	page := SearchPage{Listings: []SearchListing{}, Warnings: []domain.WarningV1{}}
 	if pagingValue, exists := searchDirectField(ads, "paging"); exists {
 		if paging, pagingOK := pagingValue.(map[string]any); pagingOK {
+			if next, exists := paging["nextPage"]; exists {
+				page.Continuation = &SearchContinuation{}
+				if next != nil {
+					number, ok := searchInt(next)
+					if !ok || number < 0 {
+						return SearchPage{}, webContract("search continuation has an invalid page number")
+					}
+					page.Continuation.Next = &number
+				}
+			}
 			if totalValue, totalOK := searchDirectField(paging, "numFound"); totalOK {
 				if total, parseOK := searchInt(totalValue); parseOK && total >= 0 {
 					page.Total = total

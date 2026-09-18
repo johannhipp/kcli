@@ -102,7 +102,8 @@ Listing URLs are accepted directly. ID-only lookup requires a public URL already
 encountered by the profile; the client never fabricates a listing URL. Public
 listing fields and unknown captured attribute values are normalized into JSON;
 raw output is a redacted extracted record, not full HTML containing page tokens.
-Absent metadata remains unknown. Search pagination follows returned links.
+Absent metadata remains unknown. Search pagination follows returned links and preserves their continuation in
+normalized output. Known terminal pages stop without an extra synthetic fetch.
 
 The advertised `global.zustand` enum is echoed by the website under
 `globalFilters["global.condition"]`. Filter verification recognizes that exact
