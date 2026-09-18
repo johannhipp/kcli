@@ -40,6 +40,8 @@ Release automation moves pending entries into a dated section when publishing.
 
 ### Fixed
 
+- Include state initialization and SQLite lock waiting in the command timeout.
+
 - Report buffered table-output write failures instead of returning success.
 
 - Preserve NDJSON source, completeness, pagination, and warnings independently of field projection.

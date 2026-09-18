@@ -33,7 +33,7 @@ func (c *DoctorCmd) Run(runtimeContext *Runtime) error {
 		if tableErr != nil {
 			checks = append(checks, domain.DoctorCheckV1{Name: "state", Status: "error", Detail: "schema health check failed"})
 		} else {
-			checks = append(checks, domain.DoctorCheckV1{Name: "state", Status: "ok", Detail: fmt.Sprintf("%d schema tables; synchronous=FULL; 5s busy timeout", len(tables))})
+			checks = append(checks, domain.DoctorCheckV1{Name: "state", Status: "ok", Detail: fmt.Sprintf("%d schema tables; synchronous=FULL; at most 5s busy timeout", len(tables))})
 		}
 	}
 	if free, freeErr := platform.FreeBytes(runtimeContext.Paths.StateDB); freeErr != nil {
