@@ -2,7 +2,9 @@
 
 Go produces self-contained CLI binaries for macOS/Linux on amd64/arm64.
 Kong defines commands and runtime schema discovery; SQLite stores metadata,
-encountered sellers and shared request reservations. Public HTML/JSON reads use
+encountered sellers and shared request reservations. All seller-write paths prune
+observations older than 30 days and keep at most 10,000 sellers; deleting a seller
+also deletes its indexed listing links. Public HTML/JSON reads use
 bounded HTTP requests and verified website links. The web adapter normalizes
 those responses for the application services; mobile-shaped internal request
 identifiers are compatibility plumbing, not outgoing mobile API requests.

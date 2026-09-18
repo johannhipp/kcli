@@ -27,6 +27,8 @@ Release automation moves pending entries into a dated section when publishing.
 
 ### Fixed
 
+- Apply seller age and count retention limits to search and inventory indexing.
+
 - Classify malformed or unsupported website hydration as a safe upstream-contract error.
 
 - Preserve website search continuation and label within-page result truncation.
