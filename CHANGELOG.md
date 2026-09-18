@@ -5,6 +5,12 @@ Release automation moves pending entries into a dated section when publishing.
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-09-18
+
+### Changed
+
+- fix(search): preserve website pagination and report truncation (#15) (2366a87)
+
 ## [0.1.3] - 2026-09-18
 
 ### Changed
@@ -61,7 +67,8 @@ Release automation moves pending entries into a dated section when publishing.
   reads, recognize commercial-listing seller IDs, and preserve relative image
   output paths through CLI parsing.
 
-[Unreleased]: https://github.com/johannhipp/kcli/compare/v0.1.3...HEAD
+[Unreleased]: https://github.com/johannhipp/kcli/compare/v0.1.4...HEAD
+[0.1.4]: https://github.com/johannhipp/kcli/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/johannhipp/kcli/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/johannhipp/kcli/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/johannhipp/kcli/compare/v0.1.0...v0.1.1
