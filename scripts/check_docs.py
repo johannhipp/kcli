@@ -13,11 +13,9 @@ MARKDOWN_FILES = [
     *sorted((ROOT / "docs").glob("*.md")),
 ]
 STORY_FILES = {
-    ROOT / "docs" / "user-stories.md": r"US-[A-Z]+-\d+",
     ROOT / "docs" / "v0.1-scope.md": r"V01-[A-Z]+-\d+",
 }
 COVERAGE_FILE = ROOT / "docs" / "endpoint-coverage.md"
-IMPLEMENTATION_FILE = ROOT / "docs" / "implementation-plan.md"
 
 
 def check_local_links() -> list[str]:
@@ -92,15 +90,6 @@ def check_v01_traceability() -> list[str]:
         f"docs/endpoint-coverage.md: missing scoped story {story_id}"
         for story_id in sorted(scope_ids - coverage_ids)
     ]
-    implementation_ids = set(
-        re.findall(
-            r"V01-[A-Z]+-\d+", IMPLEMENTATION_FILE.read_text(encoding="utf-8")
-        )
-    )
-    errors.extend(
-        f"docs/implementation-plan.md: missing scoped story {story_id}"
-        for story_id in sorted(scope_ids - implementation_ids)
-    )
     return errors
 
 

@@ -7,8 +7,8 @@ var (
 	Commit           = "unknown"
 	Date             = "unknown"
 	AppVersion       = "unknown"
-	APIContract      = "2026-09-03"
-	TransportProfile = "net-http"
+	APIContract      = "2026-09-18"
+	TransportProfile = "public-web"
 	BasicUser        string
 	BasicPassword    string
 	OAuthClientID    string

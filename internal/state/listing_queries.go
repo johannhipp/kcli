@@ -39,6 +39,26 @@ type SellerIndexInfo struct {
 	NewestObservedAt time.Time
 }
 
+// UpsertPublicSeller records a profile independently of any listing, under the
+// same retention limits as sellers observed on listing pages.
+func (d *DB) UpsertPublicSeller(ctx context.Context, seller SellerSnapshot) error {
+	if err := listingValidateSellerSnapshot(seller); err != nil {
+		return err
+	}
+	return d.WithTx(ctx, func(tx *sql.Tx, _ *Queries) error {
+		observed := seller.ObservedAt.UTC().Format(time.RFC3339Nano)
+		if _, err := tx.ExecContext(ctx, `INSERT INTO sellers(seller_id,folded_name,display_name,public_json,source,completeness,observed_at) VALUES(?,?,?,?,?,?,?) ON CONFLICT(seller_id) DO UPDATE SET folded_name=excluded.folded_name,display_name=excluded.display_name,public_json=excluded.public_json,source=excluded.source,completeness=excluded.completeness,observed_at=excluded.observed_at`, seller.ID, seller.FoldedName, seller.DisplayName, []byte(seller.PublicJSON), seller.Source, seller.Completeness, observed); err != nil {
+			return err
+		}
+		cutoff := seller.ObservedAt.UTC().Add(-listingSellerRetention).Format(time.RFC3339Nano)
+		if _, err := tx.ExecContext(ctx, `DELETE FROM sellers WHERE observed_at < ?`, cutoff); err != nil {
+			return err
+		}
+		_, err := tx.ExecContext(ctx, `DELETE FROM sellers WHERE seller_id IN (SELECT seller_id FROM sellers ORDER BY observed_at DESC,seller_id LIMIT -1 OFFSET ?)`, listingSellerMaximum)
+		return err
+	})
+}
+
 func (d *DB) UpsertSellerListing(ctx context.Context, seller SellerSnapshot, listing SellerListingSnapshot) error {
 	if err := listingValidateSellerSnapshot(seller); err != nil {
 		return err

@@ -32,11 +32,13 @@ check-docs:
 check: fmt verify build vet test check-docs
 
 cross:
-	for os in darwin linux windows; do \
+	mkdir -p bin/cross
+	for os in darwin linux; do \
 		for arch in amd64 arm64; do \
-			GOOS=$$os GOARCH=$$arch $(GO) build -o /tmp/kcli-$$os-$$arch ./cmd/kcli || exit 1; \
+			CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch $(GO) build -trimpath -o bin/cross/kcli-$$os-$$arch ./cmd/kcli || exit 1; \
 		done; \
 	done
 
 clean:
-	rm -f /tmp/kcli-* kcli
+	rm -rf bin dist
+	rm -f kcli

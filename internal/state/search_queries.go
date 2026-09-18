@@ -1,14 +1,15 @@
 package state
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
-	"unicode"
 
+	"golang.org/x/text/cases"
 	"golang.org/x/text/unicode/norm"
 )
 
@@ -38,6 +39,30 @@ func (d *DB) SearchUpsertSellers(ctx context.Context, records []SearchSellerReco
 			if record.SellerID == "" || record.ListingID == "" {
 				continue
 			}
+			var previousName, previousSource, previousCompleteness string
+			var previousJSON []byte
+			err := tx.QueryRowContext(ctx, `SELECT display_name,public_json,source,completeness FROM sellers WHERE seller_id=?`, record.SellerID).Scan(&previousName, &previousJSON, &previousSource, &previousCompleteness)
+			if err != nil && err != sql.ErrNoRows {
+				return err
+			}
+			if err == nil {
+				// Detail/profile names outrank names embedded in search previews.
+				preserveName := previousName != "" && (previousSource == "listing" || previousSource == "public-web")
+				preferredName := ""
+				if preserveName {
+					preferredName = previousName
+				}
+				merged, err := mergeSellerPublic(previousJSON, record.PublicJSON, preferredName)
+				if err != nil {
+					return err
+				}
+				record.PublicJSON = merged
+				if preserveName || record.DisplayName == "" {
+					record.DisplayName = previousName
+					record.Source = previousSource
+					record.Completeness = previousCompleteness
+				}
+			}
 			observedAt := record.ObservedAt.UTC().Format(time.RFC3339Nano)
 			if _, err := tx.ExecContext(ctx, `INSERT INTO sellers(seller_id,folded_name,display_name,public_json,source,completeness,observed_at)
 				VALUES(?,?,?,?,?,?,?)
@@ -57,10 +82,59 @@ func (d *DB) SearchUpsertSellers(ctx context.Context, records []SearchSellerReco
 }
 
 func searchFoldSellerName(value string) string {
-	return strings.Map(func(r rune) rune {
-		if unicode.IsSpace(r) {
-			return ' '
+	return cases.Fold().String(norm.NFKC.String(strings.TrimSpace(value)))
+}
+
+// Sparse search previews must not erase richer profile or listing observations.
+func mergeSellerPublic(previous, incoming []byte, preferredName string) (json.RawMessage, error) {
+	decode := func(raw []byte) (map[string]any, error) {
+		value := map[string]any{}
+		decoder := json.NewDecoder(bytes.NewReader(raw))
+		decoder.UseNumber()
+		err := decoder.Decode(&value)
+		return value, err
+	}
+	old, err := decode(previous)
+	if err != nil {
+		return nil, err
+	}
+	fresh, err := decode(incoming)
+	if err != nil {
+		return nil, err
+	}
+	if old == nil {
+		old = map[string]any{}
+	}
+	var merge func(map[string]any, map[string]any)
+	merge = func(dst, src map[string]any) {
+		for key, value := range src {
+			if value == nil {
+				continue
+			}
+			switch typed := value.(type) {
+			case string:
+				if typed == "" {
+					continue
+				}
+			case []any:
+				if len(typed) == 0 {
+					continue
+				}
+			case map[string]any:
+				if len(typed) == 0 {
+					continue
+				}
+				if nested, ok := dst[key].(map[string]any); ok && nested != nil {
+					merge(nested, typed)
+					continue
+				}
+			}
+			dst[key] = value
 		}
-		return unicode.ToLower(r)
-	}, strings.TrimSpace(norm.NFKC.String(value)))
+	}
+	merge(old, fresh)
+	if preferredName != "" {
+		old["contact-name"] = preferredName
+	}
+	return json.Marshal(old)
 }

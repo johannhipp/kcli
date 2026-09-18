@@ -71,7 +71,7 @@ func (s *MetadataService) Categories(ctx context.Context, refresh bool) (Metadat
 	if len(warnings) > 0 {
 		completeness = domain.CompletenessPartial
 	}
-	return MetadataResult[[]domain.CategoryV1]{Data: parsed, Raw: append(json.RawMessage(nil), raw...), Warnings: warnings, Source: "mobile-api", ObservedAt: now, Completeness: completeness}, nil
+	return MetadataResult[[]domain.CategoryV1]{Data: parsed, Raw: append(json.RawMessage(nil), raw...), Warnings: warnings, Source: transportSource(s.transport), ObservedAt: now, Completeness: completeness}, nil
 }
 
 func categoryCacheResult(cached []state.CategorySnapshot) MetadataResult[[]domain.CategoryV1] {
@@ -141,7 +141,7 @@ func (s *MetadataService) Locations(ctx context.Context, text string, limit int)
 	if err != nil {
 		var typed *domain.Error
 		if !domainErrorAs(err, &typed) {
-			return MetadataResult[[]domain.LocationV1]{}, fmt.Errorf("mobile location endpoint failed: %w", err)
+			return MetadataResult[[]domain.LocationV1]{}, fmt.Errorf("public location endpoint failed: %w", err)
 		}
 		return MetadataResult[[]domain.LocationV1]{}, err
 	}
@@ -161,7 +161,7 @@ func (s *MetadataService) Locations(ctx context.Context, text string, limit int)
 	if len(warnings) > 0 {
 		completeness = domain.CompletenessPartial
 	}
-	return MetadataResult[[]domain.LocationV1]{Data: items, Raw: append(json.RawMessage(nil), raw...), Warnings: warnings, Source: "mobile-api", ObservedAt: now, Completeness: completeness}, nil
+	return MetadataResult[[]domain.LocationV1]{Data: items, Raw: append(json.RawMessage(nil), raw...), Warnings: warnings, Source: transportSource(s.transport), ObservedAt: now, Completeness: completeness}, nil
 }
 
 func (s *MetadataService) Filters(ctx context.Context, categoryReference string, refresh bool) (MetadataResult[[]domain.FilterV1], error) {
@@ -199,7 +199,33 @@ func (s *MetadataService) Filters(ctx context.Context, categoryReference string,
 	if len(warnings) > 0 {
 		completeness = domain.CompletenessPartial
 	}
-	return MetadataResult[[]domain.FilterV1]{Data: items, Raw: append(json.RawMessage(nil), raw...), Warnings: warnings, Source: "mobile-api", ObservedAt: now, Completeness: completeness}, nil
+	return MetadataResult[[]domain.FilterV1]{Data: items, Raw: append(json.RawMessage(nil), raw...), Warnings: warnings, Source: transportSource(s.transport), ObservedAt: now, Completeness: completeness}, nil
+}
+
+// CachedFilters never refreshes metadata or performs a request.
+func (s *MetadataService) CachedFilters(ctx context.Context, reference string) (MetadataResult[[]domain.FilterV1], error) {
+	if !validMetadataInput(reference, 512) {
+		return MetadataResult[[]domain.FilterV1]{}, &domain.Error{Code: domain.CodeInvalidInput, Message: "invalid category reference"}
+	}
+	categories, err := s.state.ListCategories(ctx)
+	if err != nil {
+		return MetadataResult[[]domain.FilterV1]{}, err
+	}
+	if len(categories) == 0 {
+		return MetadataResult[[]domain.FilterV1]{}, &domain.Error{Code: domain.CodeNotFound, Message: "category metadata is not cached; run category list"}
+	}
+	category, err := resolveCategory(categoryCacheResult(categories).Data, reference)
+	if err != nil {
+		return MetadataResult[[]domain.FilterV1]{}, err
+	}
+	cached, err := s.state.ListFilters(ctx, category.ID)
+	if err != nil {
+		return MetadataResult[[]domain.FilterV1]{}, err
+	}
+	if len(cached) == 0 {
+		return MetadataResult[[]domain.FilterV1]{}, &domain.Error{Code: domain.CodeNotFound, Message: "filter metadata is not cached; run filter list --category ID --refresh"}
+	}
+	return filterCacheResult(cached), nil
 }
 
 func filterCacheResult(cached []state.FilterSnapshot) MetadataResult[[]domain.FilterV1] {
@@ -345,8 +371,11 @@ func ParseLocations(raw []byte) ([]domain.LocationV1, []domain.WarningV1, error)
 		}
 	}
 	walk(rows)
-	if len(out) == 0 {
+	if len(out) == 0 && len(rows) > 0 {
 		return nil, warnings, &domain.Error{Code: domain.CodeUpstreamContract, Message: "location response contained no usable location identities"}
+	}
+	if out == nil {
+		out = []domain.LocationV1{}
 	}
 	return out, warnings, nil
 }
@@ -428,6 +457,9 @@ func classifyFilter(typeName, searchParam, searchStyle string) (string, string) 
 	}
 	if style == "in" {
 		return "advertised-unproven", "provisional"
+	}
+	if searchParam == "web-link" || searchParam == "clickableOptions" || strings.HasPrefix(searchParam, "attributeMap[") {
+		return "public-web-advertised", "accepted"
 	}
 	return "fixture-eq", "accepted"
 }

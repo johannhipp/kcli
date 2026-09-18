@@ -5,20 +5,18 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/alecthomas/kong"
+	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/johannhipp/kcli/internal/app"
-	"github.com/johannhipp/kcli/internal/buildinfo"
 	"github.com/johannhipp/kcli/internal/domain"
 	"github.com/johannhipp/kcli/internal/kleinanzeigen"
 	"github.com/johannhipp/kcli/internal/output"
 	"github.com/johannhipp/kcli/internal/platform"
 	schemacatalog "github.com/johannhipp/kcli/internal/schema"
-	"github.com/johannhipp/kcli/internal/secret"
 	"github.com/johannhipp/kcli/internal/state"
 	kongcompletion "github.com/jotaen/kong-completion"
 )
@@ -37,8 +35,6 @@ type Root struct {
 	Filter     FilterCmd     `cmd:"" help:"Inspect category search filters."`
 	Listing    ListingCmd    `cmd:"" help:"Inspect listings and images."`
 	Seller     SellerCmd     `cmd:"" help:"Inspect locally encountered sellers."`
-	Auth       AuthCmd       `cmd:"" help:"Manage the local authenticated session."`
-	DM         DMCmd         `cmd:"" name:"dm" help:"Read, synchronize, and communicate through direct messages."`
 	Schema     SchemaCmd     `cmd:"" help:"Inspect machine-readable command schemas."`
 	Config     ConfigCmd     `cmd:"" help:"Inspect and edit local configuration."`
 	Doctor     DoctorCmd     `cmd:"" help:"Run bounded local diagnostics."`
@@ -123,6 +119,11 @@ func (r *Runtime) Diagnostic(format string, args ...any) {
 type exitPanic int
 
 func Execute(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) (code int) {
+	return execute(ctx, args, stdin, stdout, stderr, nil)
+}
+
+// configure is a private test seam; production cannot redirect upstream hosts.
+func execute(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer, configure func(*app.Dependencies)) (code int) {
 	root := &Root{}
 	parser, err := kong.New(root, kong.Name("kcli"), kong.Description("Agent-friendly Kleinanzeigen CLI."), kong.Writers(stdout, stderr), kong.Exit(func(code int) { panic(exitPanic(code)) }), kong.Help(examplesHelpPrinter))
 	if err != nil {
@@ -187,23 +188,23 @@ func Execute(ctx context.Context, args []string, stdin io.Reader, stdout, stderr
 			return fail(runtime, &domain.Error{Code: domain.CodeUnavailable, Message: "open profile state", Cause: err}, false)
 		}
 		defer database.Close()
-		installID, err := database.MobileInstallID(runtime.Context, time.Now().UTC())
-		if err != nil {
-			return fail(runtime, &domain.Error{Code: domain.CodeUnavailable, Message: "load mobile install identity", Cause: err}, false)
-		}
-		credentials := kleinanzeigen.MobileCredentials{
-			BasicUser:     os.Getenv("KLEINANZEIGEN_BASIC_USER"),
-			BasicPassword: os.Getenv("KLEINANZEIGEN_BASIC_PW"),
-			OAuthClientID: buildinfo.OAuthClientID,
-		}
-		mobile := kleinanzeigen.NewMobileTransport(kleinanzeigen.NewHTTPTransport(), installID, credentials, database)
-		deps := app.Dependencies{Transport: mobile, State: database}
-		if strings.HasPrefix(selected, "auth ") || strings.HasPrefix(selected, "dm ") {
-			if store, err := secret.New("kcli"); err == nil {
-				deps.Secrets = store
-			}
+		deps := app.Dependencies{Transport: kleinanzeigen.NewWebTransport(database), State: database}
+		if configure != nil {
+			configure(&deps)
 		}
 		runtime.Core = app.New(deps)
+		if selected == "schema filters" {
+			runtime.Catalog = schemacatalog.New(catalog, func(ctx context.Context, category string, static *jsonschema.Schema) (*jsonschema.Schema, error) {
+				metadata, err := kleinanzeigen.NewMetadataService(deps.Transport, database).CachedFilters(ctx, category)
+				if err != nil {
+					return nil, err
+				}
+				overlay := schemacatalog.OverlayFilters(static, metadata.Data)
+				overlay.Extra["x-kcli-observed-at"] = metadata.ObservedAt.Format(time.RFC3339Nano)
+				overlay.Extra["x-kcli-stale"] = time.Since(metadata.ObservedAt) >= 24*time.Hour
+				return overlay, nil
+			})
+		}
 	}
 	if root.Output != "" {
 		format, err := output.ParseFormat(root.Output)
@@ -252,14 +253,12 @@ func selectedPath(node *kong.Node) string {
 }
 
 func requiresRemoteState(path string) bool {
-	return strings.HasPrefix(path, "category ") ||
+	return path == "doctor" || path == "schema filters" || strings.HasPrefix(path, "category ") ||
 		strings.HasPrefix(path, "location ") ||
 		strings.HasPrefix(path, "filter ") ||
-		strings.HasPrefix(path, "search ") ||
+		path == "search" ||
 		strings.HasPrefix(path, "listing ") ||
-		strings.HasPrefix(path, "seller ") ||
-		strings.HasPrefix(path, "auth ") ||
-		strings.HasPrefix(path, "dm ")
+		strings.HasPrefix(path, "seller ")
 }
 func defaultFormat(stdout io.Writer) output.Format {
 	if output.IsTTY(stdout) {

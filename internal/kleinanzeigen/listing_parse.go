@@ -20,7 +20,11 @@ func ListingFetch(ctx context.Context, transport Transport, reference string) (L
 	if err != nil {
 		return ListingDetail{}, err
 	}
-	response, err := transport.Do(getJSONRequest(ctx, "/api/ads/"+id+".json", nil, VolatileRead, false))
+	request := getJSONRequest(ctx, "/api/ads/"+id+".json", nil, VolatileRead, false)
+	if _, web := transport.(*WebTransport); web && strings.HasPrefix(reference, "https://") {
+		request.AbsoluteURL = reference
+	}
+	response, err := transport.Do(request)
 	if err != nil {
 		return ListingDetail{}, err
 	}

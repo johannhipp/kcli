@@ -1,15 +1,6 @@
 env KCLI_CONFIG_HOME=$WORK/config
-
 env KCLI_STATE_HOME=$WORK/state
-
 env KCLI_CACHE_HOME=$WORK/cache
-
-# Schema metadata for the command families implemented in later phases.
-
-exec kcli schema show dm reply
-stdout '"side_effect": "external-message"'
-stdout '"confirmation_required": true'
-! stderr .
 
 exec kcli schema show listing get
 stdout '"side_effect": "none"'
@@ -19,37 +10,18 @@ exec kcli schema show seller get
 stdout '"evidence": "provisional"'
 ! stderr .
 
-exec kcli schema show dm poll
-stdout '"side_effect": "account-state"'
-! stderr .
-
-# Fail-closed authenticated commands require a session and never open the
-# network.
+! exec kcli schema show dm reply
+stdout '"schema": "kcli.error/v1"'
+stdout '"code": "invalid_schema"'
 
 ! exec kcli dm poll --since now
-stdout '"schema": "kcli.error/v1"'
-stdout '"code": "auth_required"'
-stderr 'dm poll is list-only; no conversation is opened or marked loaded/read'
-stderr 'login is required'
+stdout '"code": "invalid_command"'
 
-! exec kcli dm reply 123 --message hi --confirm cnf_x
-stdout '"code": "auth_required"'
-stderr 'dm reply confirm atomically claims local confirmation state and performs at most one external-send attempt'
-stderr 'login is required'
-
-
-# Every resource family parses and renders help without any network.
+! exec kcli auth login --help
+stdout '"code": "invalid_command"'
 
 exec kcli listing get --help
 stdout '^Usage: kcli listing get <id-or-url> \[flags\]$'
-! stderr .
-
-exec kcli dm reply --help
-stdout '^Usage: kcli dm reply <conversation-id> \[flags\]$'
-! stderr .
-
-exec kcli auth login --help
-stdout '^Usage: kcli auth login \[flags\]$'
 ! stderr .
 
 exec kcli search --help

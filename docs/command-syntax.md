@@ -1,7 +1,6 @@
 # kcli command syntax
 
-Status: implemented (offline); automated live testing and the `0.1.0` release remain gated
-Current release: commands marked **v0.1**
+Release contract: anonymous-only `0.1.0`. See [acceptance evidence](test-results.md).
 
 This document fixes command names and argument shapes before implementation.
 Commands are singular resource nouns followed by verbs. `search` is the one
@@ -26,8 +25,7 @@ projection remains composable through an external `jq` process.
 All durations use explicit suffixes such as `30s`, `5m`, or `1h`. `--timeout`
 may lower but never raise the documented operation ceiling. Every command
 supports `--help`; `kcli schema show` provides the machine-readable equivalent.
-The later daemon layer adds mutually exclusive global `--no-daemon` and
-`--require-daemon` controls; they are not needed in v0.1.
+No daemon or background polling is included.
 
 ## Discovery commands
 
@@ -39,11 +37,11 @@ kcli search [QUERY]
   [--location ID_OR_TEXT] [--radius KM]
   [--min-price EUR] [--max-price EUR]
   [--ad-type offered|wanted]
-  [--picture-required]
+  [--picture-required] # unsupported by the public website; explicit error
   [--sort date-desc|price-asc|price-desc|distance-asc]
   [--filter KEY=VALUE]...
   [--exclude TEXT]...
-  [--page NUMBER] [--page-size NUMBER]
+  [--page NUMBER] [--page-size 25] # website controls page size
   [--paginate] [--limit NUMBER]
   [--input FILE|-]
 ```
@@ -52,6 +50,10 @@ kcli search [QUERY]
 exclusive with search-building flags so an agent cannot accidentally mix two
 sources of truth. `--paginate` requires a bounded `--limit` unless a documented
 safe default applies.
+
+Numeric `--location` values are location IDs. Resolve a postcode with
+`kcli location resolve POSTCODE` first, then pass the returned ID. Text place
+names must resolve unambiguously.
 
 ### Categories, locations, and filters — **v0.1**
 
@@ -68,7 +70,12 @@ kcli filter get --category ID_OR_PATH KEY
 
 Filter output includes the metadata option key, upstream `search-param`
 capability marker, `search-style`, type, legal values, labels, and whether
-serialization has been live-proven.
+serialization is supported. `public-web-advertised` means the encoding was
+observed in website controls, not that every value has been live-tested. Enum
+values use advertised choices; range values use `MIN,MAX` (one bound may be
+empty); booleans use `true` or `false`. Repeat `--filter` for multiple keys;
+commas inside a range remain part of that value. Unknown types and multiple
+values for one enum are rejected explicitly.
 
 ## Listing commands
 
@@ -81,7 +88,8 @@ kcli listing images ID_OR_URL --download SELECTOR         # v0.1
 kcli listing open ID_OR_URL                               # v0.1
 ```
 
-`listing images` lists every returned variant by default. `SELECTOR` is a
+`listing images` lists the returned full-size gallery image URLs by default.
+Thumbnail/srcset resolution variants are not an exhaustive media inventory. `SELECTOR` is a
 returned image index, exact relation name, or `all`, never an arbitrary URL.
 Downloads stay under the current working directory unless the user explicitly
 permits an exact outside path. `listing open` opens the official public URL and
@@ -96,100 +104,16 @@ kcli seller search NAME [--match exact|contains]           # v0.1
 kcli seller listings ID_OR_URL [--limit NUMBER]            # v0.1
 ```
 
-Every result includes `source` (`listing`, `profile-link`, or `local-index`) and
+Every result includes `source` (`public-web`, `listing`, `profile-link`, or `local-index`) and
 `completeness` (`direct`, `known-only`, or `best-effort`). `seller search` never
-claims to search every Kleinanzeigen user. `seller listings` returns locally
-known or explicitly linked listings until an anonymous seller-inventory endpoint
-is proven.
+claims to search every Kleinanzeigen user. `seller listings` reads one public inventory page and labels it best-effort.
 
-## Authentication commands
-
-```text
-kcli auth login [--profile NAME] [--no-open]
-  [--redirect-file FILE|-]                                 # v0.1
-kcli auth status [--check]                                 # v0.1
-kcli auth logout [--dry-run]                               # v0.1
-```
-
-Interactive login opens the system browser and completes Auth0 PKCE by accepting
-the provider's final HTTPS redirect URL. `--redirect-file -` supports a
-non-echoed stdin handoff without placing the single-use code in argv or shell
-history. Refresh-token environment injection is deferred until rotation and
-token-family behavior are verified.
-
-## DM commands
-
-### Read and synchronize — **v0.1**
-
-```text
-kcli dm list [--unread] [--page NUMBER] [--page-size NUMBER]
-  [--paginate] [--limit NUMBER]
-kcli dm get CONVERSATION_ID
-kcli dm mark-read CONVERSATION_ID... [--input FILE|-] [--dry-run]
-
-kcli dm poll [--after CURSOR | --since TIME_OR_NOW]
-  [--limit NUMBER] [--advance | --no-advance] [--open-changed]
-kcli dm watch [--after CURSOR | --since TIME_OR_NOW]
-  [--interval DURATION] [--limit NUMBER]
-  [--include-heartbeats] [--open-changed]
-```
-
-`poll` runs once. Without an explicit cursor it uses the named profile's stored
-cursor; first use requires `--since`. It advances durable state only after a
-complete stored batch and successful stdout flush. `--no-advance` is available
-for replay and diagnostics. The stored cursor head only moves forward: an
-explicit older `--after` replays from that point but never rewinds the head.
-`poll` is a finite command, so its output follows the global rules: one JSON
-envelope containing the events and the resulting cursor, or, with explicit
-NDJSON, event lines followed by a `kcli.summary/v1` line. Both commands observe
-conversation-summary changes by default. `--open-changed` additionally calls
-the state-touching conversation `PUT` to identify changed messages; help and
-schemas label that side effect. `watch` repeats the same operation until
-interrupted and emits `kcli.event/v1` NDJSON. Its `--interval` floor is the
-30-second default; the flag can only slow polling down.
-
-### Communicate — **v0.1**
-
-```text
-kcli dm reply CONVERSATION_ID
-  (--message TEXT | --message-file FILE|- | --input FILE|-)
-  --dry-run
-  [--acknowledge-warning CODE]
-  [--acknowledge-possible-duplicate PREVIOUS_CONFIRMATION_ID]
-kcli dm reply CONVERSATION_ID
-  (--message TEXT | --message-file FILE|- | --input FILE|-)
-  --confirm CONFIRMATION_ID
-
-kcli dm start LISTING_ID_OR_URL
-  (--message TEXT | --message-file FILE|- | --input FILE|-)
-  [--contact-name NAME]
-  --dry-run
-  [--acknowledge-warning CODE]
-  [--acknowledge-possible-duplicate PREVIOUS_CONFIRMATION_ID]
-kcli dm start LISTING_ID_OR_URL
-  (--message TEXT | --message-file FILE|- | --input FILE|-)
-  [--contact-name NAME]
-  --confirm CONFIRMATION_ID
-```
-
-A dry run returns the exact account, recipient/conversation, listing context,
-message preview, warnings, and a short-lived `confirmation_id`. The plan stores
-the message digest, not the body. Confirmation must receive the exact message
-and contact name again; changing any bound value invalidates it. No TTY or
-non-TTY path bypasses the two commands. A platform warning requires a new dry
-run with the exact warning code, and a prior ambiguous send requires explicit
-acknowledgement of its confirmation ID after the user inspects the thread.
-
-After an ambiguous send, kcli reconciles the thread once and reports
-`sent_reconciled` only when a recent outgoing message matches after
-normalization and a narrow timestamp window relative to the *local* clock. A
-machine clock skewed from the service's `ReceivedAt` can therefore turn a
-successful send into `outcome_unknown` (exit 8) instead of a success; reconcile
-the thread manually before deciding whether to resend.
-
-There are deliberately no `pickup`, `offer`, `negotiate`, `meeting`, `pay`, or
-`transaction` commands. Those subjects are ordinary text passed to `dm reply` or
-`dm start`.
+Accepted seller references share one validator in CLI and application code:
+numeric IDs, observed API `self-user` links, `/s-anbieter/<slug>/<id>` links,
+and `/s-bestandsliste.html?userId=<id>` on the official website. Additional query
+parameters, other hosts, and malformed IDs are rejected. Previously encountered sellers use the local index. An unknown numeric ID or
+profile URL fetches its public profile; `seller listings` reads one bounded public
+inventory page. Neither result claims exhaustive inventory coverage.
 
 ## Schemas, configuration, and diagnostics
 
@@ -203,53 +127,26 @@ kcli config get KEY                                        # v0.1
 kcli config set KEY VALUE [--dry-run]                      # v0.1
 kcli config path                                           # v0.1
 
-kcli doctor [--network] [--auth]                           # v0.1
+kcli doctor [--network]                           # v0.1
 kcli completion bash|fish|zsh                              # v0.1
 kcli version                                               # v0.1
 ```
 
 Schemas describe flags, JSON input, output fields, enums, required auth scope,
 side effects, confirmation requirements, and whether an upstream contract is
-live-proven. `doctor` checks configuration, secret-store access, public endpoint
-compatibility, state health, and daemon compatibility without exposing secrets
-or sending messages.
+live-proven. `doctor` checks local configuration, disk and state health. `--network` makes
+a paced public category request. No login, keyring, or credentials are needed.
 
-## Daemon and MCP commands — after v0.1
+Raw-payload fields describe arbitrary JSON values in runtime schemas, matching
+their actual output; they are not arrays of byte integers.
 
-```text
-kcli daemon run [--poll-interval DURATION]
-kcli daemon install [--dry-run]
-kcli daemon start
-kcli daemon stop
-kcli daemon restart
-kcli daemon status
-kcli daemon logs [--follow]
-kcli daemon uninstall [--dry-run]
-
-kcli mcp serve [--stdio]
-```
-
-`daemon run` is the actual foreground process; the other lifecycle commands
-delegate to the per-user OS service manager. `mcp serve` uses stdio by default.
-Neither opens a network listener unless a future, separately reviewed option
-explicitly requests it.
-
-## Later buyer-side browser parity
-
-Names are reserved but not promised until useful endpoints are verified:
-
-```text
-kcli watchlist list
-kcli watchlist add LISTING_ID_OR_URL
-kcli watchlist remove LISTING_ID_OR_URL
-
-kcli saved-search list|get|create|update|delete
-kcli saved-search watch ID
-```
-
-Reporting, blocking, following, and attachments do not receive command names
-until their endpoint and safety contracts are known. Selling and transaction
-families will not be reserved.
+`schema filters` reads the profile cache without network access. It returns
+`overlay: "cached"`, key/value alternatives, enum constraints, and all observed
+definitions (including unsupported ones) under `x-kcli-filter-metadata`.
+`x-kcli-observed-at` and `x-kcli-stale` expose cache age. Missing cache is an
+actionable schema error (exit 2): run `filter list --category ID --refresh` first.
+The schema is descriptive; search still validates scalar types, combinations,
+and serialization proof before sending a request.
 
 ## Stable exit behavior
 
@@ -257,13 +154,13 @@ families will not be reserved.
 |---:|---|
 | `0` | Complete success; partial/resource state is represented in output |
 | `1` | Unclassified failure |
-| `2` | Invalid command, identifier, input, schema, or a cursor that does not belong to this profile/store (`resync_required`) |
-| `3` | Login required, expired, or revoked |
+| `2` | Invalid command, identifier, input, schema,  |
+| `3` | Reserved for authentication errors; no login flow in this release |
 | `4` | Resource unavailable or not found |
 | `5` | Retryable upstream or connectivity failure |
 | `6` | Rate limited, by the service (`rate_limited`) or by the local cross-process reservation queue (`rate_limited_local`); retry metadata is in the structured error |
-| `7` | Confirmation missing, expired, mismatched, warning-blocked, or unresolved-duplicate acknowledgement required |
-| `8` | An external mutation may have succeeded; reconcile before any retry |
+| `7` | Reserved; no remote mutations in this release |
+| `8` | Reserved; no remote mutations in this release |
 | `130` | Interrupted with `SIGINT` |
 | `143` | Terminated with `SIGTERM` |
 

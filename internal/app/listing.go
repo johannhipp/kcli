@@ -18,7 +18,7 @@ func (a *App) ListingGet(ctx context.Context, input domain.ListingGetInputV1, re
 	if err != nil {
 		return domain.ListingOutputV1{}, err
 	}
-	envelope := Envelope(a.Clock, "kcli.listing/v1", requestID, "mobile-api", detail.Listing)
+	envelope := Envelope(a.Clock, "kcli.listing/v1", requestID, transportSource(a.Transport), detail.Listing)
 	envelope.ObservedAt = observedAt
 	envelope.Warnings = detail.Warnings
 	if len(detail.Warnings) > 0 {
@@ -57,7 +57,7 @@ func (a *App) ListingImages(ctx context.Context, input domain.ListingImagesInput
 			}
 		}
 	}
-	envelope := Envelope(a.Clock, "kcli.listing-images/v1", requestID, "mobile-api", items)
+	envelope := Envelope(a.Clock, "kcli.listing-images/v1", requestID, transportSource(a.Transport), items)
 	envelope.ObservedAt = observedAt
 	envelope.Warnings = detail.Warnings
 	if len(detail.Warnings) > 0 {
@@ -75,7 +75,7 @@ func (a *App) ListingOpen(ctx context.Context, input domain.ListingOpenInputV1, 
 		return domain.ListingOpenOutputV1{}, &domain.Error{Code: domain.CodeUpstreamContract, Message: "listing detail did not contain a valid official public URL"}
 	}
 	data := map[string]string{"url": detail.Listing.URL}
-	envelope := Envelope(a.Clock, "kcli.listing-open/v1", requestID, "mobile-api", data)
+	envelope := Envelope(a.Clock, "kcli.listing-open/v1", requestID, transportSource(a.Transport), data)
 	envelope.ObservedAt = observedAt
 	envelope.Warnings = detail.Warnings
 	return domain.ListingOpenOutputV1{Envelope: envelope}, nil

@@ -55,6 +55,25 @@ func (a *App) SellerGet(ctx context.Context, input domain.SellerGetInputV1, requ
 	}
 	snapshot, err := a.State.SellerByID(ctx, id)
 	if err == sql.ErrNoRows {
+		if remote, ok := a.Transport.(interface {
+			PublicSeller(context.Context, string) (domain.SellerV1, error)
+		}); ok {
+			data, err := remote.PublicSeller(ctx, id)
+			if err != nil {
+				return domain.SellerOutputV1{}, err
+			}
+			data.ObservedAt = a.Clock.Now().UTC()
+			public, err := json.Marshal(data.Public)
+			if err != nil {
+				return domain.SellerOutputV1{}, err
+			}
+			if err := a.State.UpsertPublicSeller(ctx, state.SellerSnapshot{ID: data.ID, FoldedName: sellerFoldName(data.Name), DisplayName: data.Name, PublicJSON: public, Source: "public-web", Completeness: string(domain.CompletenessBestEffort), ObservedAt: data.ObservedAt}); err != nil {
+				return domain.SellerOutputV1{}, err
+			}
+			envelope := Envelope(a.Clock, "kcli.seller/v1", requestID, "public-web", data)
+			envelope.Completeness = domain.CompletenessBestEffort
+			return domain.SellerOutputV1{Envelope: envelope}, nil
+		}
 		return domain.SellerOutputV1{}, sellerLocalMiss(id)
 	}
 	if err != nil {
@@ -121,6 +140,31 @@ func (a *App) SellerListings(ctx context.Context, input domain.SellerListingsInp
 	id, _, err := sellerReferenceID(input.IDOrURL)
 	if err != nil {
 		return domain.SellerListingsOutputV1{}, err
+	}
+	if remote, ok := a.Transport.(interface {
+		PublicSellerListings(context.Context, string) (kleinanzeigen.SearchPage, error)
+	}); ok {
+		page, err := remote.PublicSellerListings(ctx, id)
+		if err != nil {
+			return domain.SellerListingsOutputV1{}, err
+		}
+		now := a.Clock.Now().UTC()
+		if err := a.State.SearchUpsertSellers(ctx, searchSellerRecords(page.Listings, now)); err != nil {
+			return domain.SellerListingsOutputV1{}, err
+		}
+		items := make([]domain.ListingSummaryV1, 0, len(page.Listings))
+		for _, listing := range page.Listings {
+			if len(items) >= input.Limit {
+				break
+			}
+			item := listing.Summary
+			item.ObservedAt = now
+			items = append(items, item)
+		}
+		envelope := Envelope(a.Clock, "kcli.seller-listings/v1", requestID, "public-web", items)
+		envelope.Completeness = domain.CompletenessBestEffort
+		envelope.Warnings = append(page.Warnings, domain.WarningV1{Code: "bounded_inventory", Message: "results cover one public seller inventory page, not an exhaustive inventory"})
+		return domain.SellerListingsOutputV1{Envelope: envelope}, nil
 	}
 	seller, err := a.State.SellerByID(ctx, id)
 	if err == sql.ErrNoRows {
@@ -277,6 +321,12 @@ func sellerCopyPublic(public map[string]any) map[string]any {
 		copy[key] = value
 	}
 	return copy
+}
+
+// ValidateSellerReference shares the exact ID/profile grammar with CLI parsing.
+func ValidateSellerReference(reference string) error {
+	_, _, err := sellerReferenceID(reference)
+	return err
 }
 
 func sellerReferenceID(reference string) (string, bool, error) {

@@ -303,3 +303,10 @@ func searchStopReason(warnings []domain.WarningV1) string {
 	}
 	return ""
 }
+
+func TestNumericLocationReferenceDoesNotQueryTextSuggestions(t *testing.T) {
+	result, err := searchResolveLocation(context.Background(), nil, "3331")
+	if err != nil || result.Data.ID != "3331" {
+		t.Fatalf("ID was not preserved: %#v, %v", result, err)
+	}
+}

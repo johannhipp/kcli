@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"os"
 	"reflect"
 	"runtime"
 	"strings"
@@ -12,7 +11,6 @@ import (
 	"github.com/johannhipp/kcli/internal/buildinfo"
 	"github.com/johannhipp/kcli/internal/domain"
 	"github.com/johannhipp/kcli/internal/platform"
-	"github.com/johannhipp/kcli/internal/secret"
 	"github.com/johannhipp/kcli/internal/state"
 	kongcompletion "github.com/jotaen/kong-completion"
 )
@@ -62,7 +60,7 @@ func (c *SchemaFiltersCmd) Run(runtime *Runtime) error {
 	if err != nil {
 		return &domain.Error{Code: domain.CodeInvalidSchema, Message: err.Error(), Cause: err}
 	}
-	return runtime.Emit("kcli.filter-schema/v1", map[string]any{"category": c.Category, "schema": result, "overlay": "static-until-phase-2"})
+	return runtime.Emit("kcli.filter-schema/v1", map[string]any{"category": c.Category, "schema": result, "overlay": "cached"})
 }
 func (*SchemaFiltersCmd) Describe() app.OperationMeta {
 	return localOperation("Overlay cached live filter metadata on the static search schema.", domain.SchemaFiltersInputV1{}, domain.SchemaOutputV1{}, "kcli.filter-schema/v1", app.SideEffectNone, []string{"kcli schema filters --category 278"})
@@ -134,18 +132,12 @@ func (*ConfigPathCmd) Describe() app.OperationMeta {
 
 type DoctorCmd struct {
 	Network bool
-	Auth    bool
 }
 
 func (c *DoctorCmd) Run(runtimeContext *Runtime) error {
-	keyringCheck := domain.DoctorCheckV1{Name: "keyring", Status: "ok", Detail: "OS keyring is available; no secret values read"}
-	if err := secret.CheckAvailability(); err != nil {
-		keyringCheck = domain.DoctorCheckV1{Name: "keyring", Status: "error", Detail: "OS keyring is unavailable"}
-	}
 	checks := []domain.DoctorCheckV1{
 		{Name: "build", Status: "ok", Detail: buildinfo.Current().Version + " " + runtime.GOOS + "/" + runtime.GOARCH},
 		{Name: "config", Status: "ok", Detail: runtimeContext.Paths.ConfigFile},
-		keyringCheck,
 	}
 	if _, err := runtimeContext.Config.Load(); err != nil {
 		checks[1] = domain.DoctorCheckV1{Name: "config", Status: "error", Detail: err.Error()}
@@ -169,30 +161,24 @@ func (c *DoctorCmd) Run(runtimeContext *Runtime) error {
 	} else {
 		checks = append(checks, domain.DoctorCheckV1{Name: "disk_space", Status: "ok", Detail: fmt.Sprintf("%d bytes available", free)})
 	}
-	distribution := buildinfo.DistributionConfigured() || (os.Getenv("KLEINANZEIGEN_BASIC_USER") != "" && os.Getenv("KLEINANZEIGEN_BASIC_PW") != "")
-	oauth := buildinfo.OAuthConfigured()
-	checks = append(checks, presentCheck("distribution_config", distribution), presentCheck("oauth_config", oauth))
+	checks = append(checks, domain.DoctorCheckV1{Name: "backend", Status: "ok", Detail: "public website; no login or application credentials required"})
 	if c.Network {
-		checks = append(checks, domain.DoctorCheckV1{Name: "network", Status: "blocked", Detail: "live compatibility checks require recorded written permission"})
+		service, serviceErr := metadataService(runtimeContext)
+		if serviceErr != nil {
+			return serviceErr
+		}
+		_, probeErr := service.Categories(runtimeContext.Context, true)
+		if probeErr != nil {
+			return probeErr
+		}
+		checks = append(checks, domain.DoctorCheckV1{Name: "network", Status: "ok", Detail: "public category response parsed successfully"})
 	} else {
 		checks = append(checks, domain.DoctorCheckV1{Name: "network", Status: "skipped", Detail: "local-only by default"})
 	}
-	if c.Auth {
-		checks = append(checks, domain.DoctorCheckV1{Name: "auth", Status: "blocked", Detail: "authenticated checks arrive in Phase 5"})
-	} else {
-		checks = append(checks, domain.DoctorCheckV1{Name: "auth", Status: "skipped", Detail: "no secret values read"})
-	}
-	checks = append(checks, domain.DoctorCheckV1{Name: "api_evidence", Status: "blocked", Detail: "Phase 0 permission and compatibility gates remain open; contract " + buildinfo.APIContract})
 	return runtimeContext.Emit("kcli.doctor/v1", checks)
 }
 func (*DoctorCmd) Describe() app.OperationMeta {
-	return localOperation("Run local diagnostics; network and auth probes are explicit.", domain.DoctorInputV1{}, domain.DoctorOutputV1{}, "kcli.doctor/v1", app.SideEffectLocal, []string{"kcli doctor"})
-}
-func presentCheck(name string, present bool) domain.DoctorCheckV1 {
-	if present {
-		return domain.DoctorCheckV1{Name: name, Status: "ok", Detail: "present"}
-	}
-	return domain.DoctorCheckV1{Name: name, Status: "missing", Detail: "not configured"}
+	return localOperation("Run local diagnostics; --network explicitly checks public category access.", domain.DoctorInputV1{}, domain.DoctorOutputV1{}, "kcli.doctor/v1", app.SideEffectLocal, []string{"kcli doctor"})
 }
 
 type CompletionCmd struct {

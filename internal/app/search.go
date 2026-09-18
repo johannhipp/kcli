@@ -134,7 +134,7 @@ func (a *App) Search(ctx context.Context, input domain.SearchInputV1) (domain.Se
 		metadataDetails["total"] = lastTotal
 	}
 	warnings = append(warnings, domain.WarningV1{Code: "search_metadata", Message: "search completed at a bounded stop condition", Details: metadataDetails})
-	envelope := Envelope(a.Clock, "kcli.search-results/v1", "", "mobile-api", listings)
+	envelope := Envelope(a.Clock, "kcli.search-results/v1", "", transportSource(a.Transport), listings)
 	envelope.ObservedAt = observedAt
 	envelope.Page = &domain.PageV1{Number: canonical.Page, Size: canonical.PageSize, Fetched: fetched, Returned: len(listings)}
 	envelope.Raw = nil
@@ -222,6 +222,11 @@ func searchCanonicalInput(input domain.SearchInputV1) (domain.SearchInputV1, err
 }
 
 func searchResolveLocation(ctx context.Context, metadata *kleinanzeigen.MetadataService, reference string) (kleinanzeigen.MetadataResult[domain.LocationV1], error) {
+	// Numeric references are IDs; postcode text is resolved explicitly through
+	// location resolve so it cannot be confused with an upstream location ID.
+	if searchNumeric(reference) {
+		return kleinanzeigen.MetadataResult[domain.LocationV1]{Data: domain.LocationV1{ID: reference}, Warnings: []domain.WarningV1{}, Source: "input", Completeness: domain.CompletenessBestEffort}, nil
+	}
 	result, err := metadata.Locations(ctx, reference, 100)
 	if err != nil {
 		return kleinanzeigen.MetadataResult[domain.LocationV1]{}, err

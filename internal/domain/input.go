@@ -151,7 +151,6 @@ type ConfigSetInputV1 struct {
 type ConfigPathInputV1 struct{}
 type DoctorInputV1 struct {
 	Network bool `json:"network,omitempty"`
-	Auth    bool `json:"auth,omitempty"`
 }
 type CompletionInputV1 struct {
 	Shell string `json:"shell"`

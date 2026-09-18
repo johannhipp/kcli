@@ -2,8 +2,8 @@
 
 ## Supported versions
 
-kcli has no released version yet. Security work currently targets the default
-branch and the planned `0.1.0` release.
+Security work targets the default branch and latest `0.1.x` release.
+See GitHub Releases for published versions.
 
 ## Reporting a vulnerability
 
@@ -19,7 +19,7 @@ source; deleting it from Git history is not sufficient.
 
 ## Project security boundaries
 
-- The undocumented mobile API is unsupported and may change without notice.
+- The unofficial website markup/API may change without notice.
 - Automated live access requires written Kleinanzeigen permission.
 - Access controls, rate limits, warnings, and anti-automation measures must not
   be bypassed.

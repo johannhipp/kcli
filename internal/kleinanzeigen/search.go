@@ -49,7 +49,11 @@ func SearchAds(ctx context.Context, transport Transport, query map[string][]stri
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return SearchPage{}, ResponseError(response)
 	}
-	return SearchParsePage(response.Body)
+	page, err := SearchParsePage(response.Body)
+	for i := range page.Listings {
+		page.Listings[i].Summary.Source = transportSource(transport)
+	}
+	return page, err
 }
 
 // SearchParsePage decodes object-or-array search results without retaining the

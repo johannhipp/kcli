@@ -132,8 +132,7 @@ func (c *Catalog) Filters(ctx context.Context, category string) (*jsonschema.Sch
 		return nil, err
 	}
 	if c.filterOverlay == nil {
-		static.Comment = "live category filter overlay is unavailable until metadata is cached in Phase 2"
-		return static, nil
+		return nil, fmt.Errorf("category filter cache is unavailable")
 	}
 	return c.filterOverlay(ctx, category, static)
 }
@@ -165,7 +164,11 @@ func infer(value reflect.Type, name string) (*jsonschema.Schema, error) {
 	for value.Kind() == reflect.Pointer {
 		value = value.Elem()
 	}
-	schema, err := jsonschema.ForType(value, nil)
+	schema, err := jsonschema.ForType(value, &jsonschema.ForOptions{
+		TypeSchemas: map[reflect.Type]*jsonschema.Schema{
+			reflect.TypeFor[json.RawMessage](): {},
+		},
+	})
 	if err != nil {
 		return nil, fmt.Errorf("infer %s: %w", name, err)
 	}

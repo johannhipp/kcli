@@ -10,7 +10,7 @@ stdout '"schema": "kcli.version/v1"'
 
 exec kcli schema list
 stdout '"path": "search"'
-stdout '"path": "dm reply"'
+! stdout '"path": "dm reply"'
 ! stderr .
 
 exec kcli schema show search
@@ -45,7 +45,6 @@ stdout '"name": "state"'
 stdout '"name": "network"'
 ! stderr .
 
-! exec kcli search x
+! exec kcli auth status
 stdout '"schema": "kcli.error/v1"'
-stdout '"code": "unavailable"'
-stderr '^search state is unavailable$'
+stdout '"code": "invalid_command"'

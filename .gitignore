@@ -47,3 +47,7 @@ kcli-downloads/
 .cache/
 .tmp/
 tmp/
+
+# Local executable and agent scratch plans
+/kcli
+/plans/

@@ -9,18 +9,12 @@ Read these sources of truth in order:
 1. [`docs/v0.1-scope.md`](docs/v0.1-scope.md) for the current release boundary.
 2. [`docs/kcli-scope.md`](docs/kcli-scope.md) for the enduring product,
    architecture, safety, and compatibility decisions.
-3. [`docs/implementation-plan.md`](docs/implementation-plan.md) for the chosen
-   stack, feasibility gates, architecture, phases, tests, and story traceability.
-4. [`docs/command-syntax.md`](docs/command-syntax.md) for proposed public CLI
-   names, flags, streams, and exit behavior.
+3. [`docs/architecture.md`](docs/architecture.md) for architecture and tests.
+4. [`docs/command-syntax.md`](docs/command-syntax.md) for public commands.
 5. [`docs/endpoint-coverage.md`](docs/endpoint-coverage.md) and
-   [`docs/mobile-api.md`](docs/mobile-api.md) for desired operations, evidence,
-   gaps, and known private endpoint contracts.
-6. [`docs/dm-sync.md`](docs/dm-sync.md) for cursor, polling, watching, daemon,
-   and MCP rules.
-7. [`docs/user-stories.md`](docs/user-stories.md) for the complete website
-   capability inventory and out-of-scope traceability.
-8. [`CHANGELOG.md`](CHANGELOG.md) for repository history and pending changes.
+   [`docs/web-api.md`](docs/web-api.md) for verified anonymous contracts.
+6. [`docs/test-results.md`](docs/test-results.md) for current evidence.
+7. [`CHANGELOG.md`](CHANGELOG.md) for pending and released changes.
 
 Follow [`CONTRIBUTING.md`](CONTRIBUTING.md) for the repository workflow and
 [`SECURITY.md`](SECURITY.md) for private vulnerability reporting.
@@ -33,7 +27,7 @@ Follow [`CONTRIBUTING.md`](CONTRIBUTING.md) for the repository workflow and
   `docs/kcli-scope.md`.
 - Treat `docs/v0.1-scope.md` as authoritative for `0.1.0`.
 - v0.1 is browser-equivalent discovery, listing inspection, best-effort seller
-  discovery, authentication, and DMs exposed through an agent-friendly CLI.
+  discovery through an agent-friendly CLI. Authentication and DMs are excluded.
 - Local pickup, meeting place, inspection, negotiation, and payment-on-pickup are
   user-written message content, not commands, structured state, or workflows.
 - Prefer one-to-one browser primitives over inferred domain automation. Do not
@@ -46,11 +40,6 @@ Follow [`CONTRIBUTING.md`](CONTRIBUTING.md) for the repository workflow and
   sellers.
 - Never invent undocumented endpoint paths. Record an unknown as a gap until it
   is verified with fresh, non-destructive evidence.
-- Preserve the meanings of `dm poll` (one finite synchronization cycle) and
-  `dm watch` (foreground NDJSON stream synthesized from polling). Do not describe
-  the current upstream as push or streaming. Both are conversation-list-only by
-  default; opening changed threads is explicit because it may alter read/load
-  state.
 - Keep commands non-interactive by default where safe, support structured JSON,
   stable IDs and useful exit codes, and use explicit confirmation immediately
   before external communication.
@@ -64,21 +53,15 @@ Update documentation in the same change as behavior:
 
 - Update `docs/v0.1-scope.md` when current-scope behavior, boundaries, stories,
   or acceptance criteria change.
-- Update `docs/mobile-api.md` when an endpoint, header, parameter, payload,
+- Update `docs/web-api.md` when an endpoint, header, parameter, payload,
   response field, authentication rule, or live-verification status changes.
 - Update `docs/endpoint-coverage.md` when command-to-endpoint coverage or evidence
   status changes.
 - Update `docs/command-syntax.md` with every public command, flag, output, schema,
   confirmation, event, or exit-code change.
-- Update `docs/dm-sync.md` with cursor, deduplication, polling, event, daemon, or
-  MCP contract changes.
 - Update `docs/kcli-scope.md` when the overall product boundary or system design
   changes.
-- Keep `docs/implementation-plan.md` current when dependencies, architecture,
-  feasibility gates, implementation phases, tests, estimates, or story delivery
-  mappings change. Do not mark a phase or story complete without its named
-  evidence.
-- Update `docs/user-stories.md` when the website capability inventory changes.
+- Keep `docs/architecture.md` current when dependencies, architecture or tests change.
 - Keep all user stories in the canonical format declared by their document and
   give every story a unique stable ID.
 - Update `docs/README.md` when documentation files are added, removed, or renamed.

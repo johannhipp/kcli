@@ -50,3 +50,10 @@ func New(deps Dependencies) *App {
 func Envelope[T any](clock Clock, schema, requestID, source string, data T) domain.Envelope[T] {
 	return domain.Envelope[T]{Schema: schema, RequestID: requestID, Source: source, ObservedAt: clock.Now().UTC(), Completeness: domain.CompletenessComplete, Data: data, Next: nil, Warnings: []domain.WarningV1{}}
 }
+
+func transportSource(transport kleinanzeigen.Transport) string {
+	if source, ok := transport.(interface{ Source() string }); ok {
+		return source.Source()
+	}
+	return "mobile-api"
+}

@@ -21,12 +21,12 @@ type SearchCmd struct {
 	MinPrice        string   `name:"min-price" help:"Exact minimum euro amount."`
 	MaxPrice        string   `name:"max-price" help:"Exact maximum euro amount."`
 	AdType          *string  `name:"ad-type" enum:"offered,wanted" help:"Ad type (default: offered)."`
-	PictureRequired bool     `name:"picture-required" help:"Require at least one picture."`
+	PictureRequired bool     `name:"picture-required" help:"Unsupported by the public website; returns an explicit error."`
 	Sort            *string  `enum:"date-desc,price-asc,price-desc,distance-asc" help:"Sort mode (default: date-desc)."`
-	Filter          []string `help:"Dynamic KEY=VALUE filter."`
-	Exclude         []string `help:"Exclude matching title or description text."`
+	Filter          []string `sep:"none" help:"Dynamic KEY=VALUE filter; ranges use MIN,MAX."`
+	Exclude         []string `sep:"none" help:"Exclude matching title or description text."`
 	Page            *int     `help:"Zero-based page number."`
-	PageSize        *int     `name:"page-size" help:"Results per page (default: 25)."`
+	PageSize        *int     `name:"page-size" help:"Website page size; only the default 25 is supported."`
 	Paginate        bool     `help:"Fetch pages up to the result bound."`
 	Limit           *int     `help:"Maximum results (default: 100 when paginating)."`
 	Input           string   `type:"path" help:"Versioned JSON input file or -."`
@@ -112,7 +112,7 @@ func (c *LocationResolveCmd) Validate() error {
 	return nil
 }
 func (*LocationResolveCmd) Describe() app.OperationMeta {
-	return operation("Resolve a place or postcode to mobile location IDs.", domain.LocationResolveInputV1{}, domain.LocationOutputV1{}, "kcli.locations/v1", false, app.SideEffectLocal, false, app.EvidenceLive, 10, 100, []string{"kcli location resolve Berlin"}, []string{"V01-SEARCH-03"})
+	return operation("Resolve a place or postcode to public location IDs.", domain.LocationResolveInputV1{}, domain.LocationOutputV1{}, "kcli.locations/v1", false, app.SideEffectLocal, false, app.EvidenceLive, 10, 100, []string{"kcli location resolve Berlin"}, []string{"V01-SEARCH-03"})
 }
 
 type FilterListCmd struct {
@@ -153,8 +153,8 @@ func (*ListingGetCmd) Describe() app.OperationMeta {
 type ListingImagesCmd struct {
 	IDOrURL         string `arg:"" name:"id-or-url" help:"Listing ID or public URL."`
 	Download        string `help:"Download selector: index, relation, or all."`
-	OutputDir       string `name:"output-dir" type:"path" help:"Destination directory (default ./kcli-downloads)."`
-	AllowOutsideCWD string `name:"allow-outside-cwd" type:"path" help:"Exact absolute path permitted outside the working directory."`
+	OutputDir       string `name:"output-dir" help:"Destination directory (default ./kcli-downloads)."`
+	AllowOutsideCWD string `name:"allow-outside-cwd" help:"Exact absolute path permitted outside the working directory."`
 	MaxBytes        int64  `name:"max-bytes" default:"26214400" help:"Maximum bytes per image (default 26214400)."`
 	Overwrite       bool   `help:"Overwrite an existing destination file."`
 }
@@ -169,7 +169,7 @@ func (c *ListingImagesCmd) Validate() error {
 	return nil
 }
 func (*ListingImagesCmd) Describe() app.OperationMeta {
-	return operation("List image variants or safely download selected variants.", domain.ListingImagesInputV1{}, domain.ListingImagesOutputV1{}, "kcli.listing-images/v1", false, app.SideEffectLocal, false, app.EvidenceLive, 0, 0, []string{"kcli listing images 1234567890"}, []string{"V01-LISTING-03", "V01-LISTING-04"})
+	return operation("List gallery images or safely download selected images.", domain.ListingImagesInputV1{}, domain.ListingImagesOutputV1{}, "kcli.listing-images/v1", false, app.SideEffectLocal, false, app.EvidenceLive, 0, 0, []string{"kcli listing images 1234567890"}, []string{"V01-LISTING-03", "V01-LISTING-04"})
 }
 
 type ListingOpenCmd struct {
@@ -434,14 +434,7 @@ func validateListingReference(value string) error {
 	return nil
 }
 func validateSellerReference(value string) error {
-	if !strings.Contains(value, "://") {
-		return validateReference(value, false)
-	}
-	parsed, err := url.Parse(value)
-	if err != nil || parsed.Scheme != "https" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" || (parsed.Hostname() != "www.kleinanzeigen.de" && parsed.Hostname() != "kleinanzeigen.de") || parsed.Path == "" || strings.Contains(value, "..") {
-		return fmt.Errorf("invalid seller reference")
-	}
-	return nil
+	return app.ValidateSellerReference(value)
 }
 func validateMutationInput(message, messageFile, input string, dryRun bool, confirm string) error {
 	count := 0
