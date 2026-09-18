@@ -27,6 +27,8 @@ Release automation moves pending entries into a dated section when publishing.
 
 ### Fixed
 
+- Preserve NDJSON source, completeness, pagination, and warnings independently of field projection.
+
 - Keep doctor, version, and config path available with malformed local configuration or state.
 
 - Apply seller age and count retention limits to search and inventory indexing.

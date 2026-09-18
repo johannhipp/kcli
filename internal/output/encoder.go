@@ -1,7 +1,6 @@
 package output
 
 import (
-	"bufio"
 	"bytes"
 	"crypto/rand"
 	"encoding/hex"
@@ -65,7 +64,7 @@ func (e Encoder) Encode(writer io.Writer, value any) error {
 	if err != nil {
 		return err
 	}
-	if len(e.Fields) > 0 {
+	if len(e.Fields) > 0 && e.Format != FormatNDJSON {
 		normalized, err = project(normalized, e.Fields)
 		if err != nil {
 			return &domain.Error{Code: domain.CodeInvalidInput, Message: err.Error()}
@@ -77,7 +76,7 @@ func (e Encoder) Encode(writer io.Writer, value any) error {
 	case FormatRaw:
 		return writeJSON(writer, Redact(normalized), false)
 	case FormatNDJSON:
-		return writeNDJSON(writer, normalized)
+		return writeNDJSON(writer, normalized, e.Fields)
 	case FormatTable:
 		return writeTable(writer, normalized)
 	default:
@@ -124,33 +123,6 @@ func writeJSON(writer io.Writer, value any, indent bool) error {
 		encoder.SetIndent("", "  ")
 	}
 	return encoder.Encode(value)
-}
-func writeNDJSON(writer io.Writer, value any) error {
-	buffered := bufio.NewWriter(writer)
-	object, ok := value.(map[string]any)
-	if !ok {
-		if err := writeJSON(buffered, value, false); err != nil {
-			return err
-		}
-		return buffered.Flush()
-	}
-	rows, hasRows := object["data"].([]any)
-	if !hasRows {
-		if err := writeJSON(buffered, value, false); err != nil {
-			return err
-		}
-		return buffered.Flush()
-	}
-	for _, row := range rows {
-		if err := writeJSON(buffered, row, false); err != nil {
-			return err
-		}
-	}
-	summary := map[string]any{"schema": domain.SummarySchemaV1, "request_id": object["request_id"], "observed_at": object["observed_at"], "returned": len(rows), "next": object["next"], "warnings": object["warnings"]}
-	if err := writeJSON(buffered, summary, false); err != nil {
-		return err
-	}
-	return buffered.Flush()
 }
 func writeTable(writer io.Writer, value any) error {
 	tw := tabwriter.NewWriter(writer, 0, 4, 2, ' ', 0)
