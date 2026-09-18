@@ -88,7 +88,9 @@ on challenges or rate limits. Persisted cooldowns are checked before reserving
 and immediately before dispatch, including requests already waiting in another
 process. Redirects remain on the exact public website host;
 media starts from exact returned URLs on `img.kleinanzeigen.de`; redirects are
-bounded and must remain on that exact image host.
+bounded and must remain on that exact image host. An offline production-transport
+download regression covers same-host redirects, rejected hosts, missing targets,
+and redirect loops.
 
 Categories and locations normalize public identity/labels. Filter metadata comes
 from returned links and form inputs: enum values use observed suffixes, booleans
