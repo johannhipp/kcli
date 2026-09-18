@@ -109,3 +109,6 @@ The advertised `global.zustand` enum is echoed by the website under
 `globalFilters["global.condition"]`. Filter verification recognizes that exact
 observed alias; mismatched values or unknown aliases fail. Numeric CLI location
 references are IDs; postcode suggestions are resolved explicitly first.
+
+Hydration decoding failures return `upstream_contract` (exit 5) with a safe
+diagnostic; raw website values remain excluded from error output.
