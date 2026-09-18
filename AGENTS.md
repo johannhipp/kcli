@@ -85,6 +85,42 @@ Update documentation in the same change as behavior:
   links to the repository's real remote URL.
 - Do not claim a version was released unless a matching release or tag exists.
 
+## Draft PR workflow
+
+- Every task that changes repository files, including documentation and cleanup,
+  must create and maintain a draft pull request targeting `main`. Start from
+  current `origin/main` on a descriptive `johann/` branch, or reuse the branch
+  and draft PR already tracking the same task. Do not create duplicate PRs.
+- Open the draft PR after the first coherent commit and push; do not wait for
+  the entire task to be finished. Keep it in draft while work continues.
+  Mark it ready or merge only when the user instructs you to do so.
+- Commit and push focused pieces at natural checkpoints: a completed behavior,
+  fix, or documentation update with its relevant verification. During longer
+  tasks, aim for a checkpoint every 15–30 minutes when a coherent unit is ready,
+  and save coherent work before pausing, handing off, or ending the task.
+  Do not manufacture empty commits or split a change solely to meet a timer.
+  Follow Conventional Commits below.
+- Maintain the PR description using these four fields, matching
+  [the PR template](.github/pull_request_template.md):
+
+  ```markdown
+  - **Outcome:** Problem and resulting behavior in one or two sentences.
+  - **Changes:** Concrete changes, compressed into one to three short clauses.
+  - **Validation:** Exact checks and results; label pending or unrun checks.
+  - **Remaining / risks:** Unfinished work and material limitations, or None.
+  ```
+
+- Refresh the description after each meaningful push, scope change, or new
+  verification result. Describe the current final shape of the change, not a
+  chronological work log; never claim a pending check passed.
+- After every substantial completed milestone and in the final response, include
+  both clickable links: **Draft PR** (`https://github.com/johannhipp/kcli/pull/N`)
+  and **Diff against main** (`https://github.com/johannhipp/kcli/pull/N/files`).
+  Verify that the PR base is `main` so its Files changed view is the correct diff.
+- Read-only tasks with no repository changes do not need an empty commit or PR.
+  If pushing or PR creation is blocked, report the blocker and saved local work
+  accurately rather than claiming a PR exists.
+
 ## Conventional Commits
 
 Every commit must follow
