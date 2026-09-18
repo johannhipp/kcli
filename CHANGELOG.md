@@ -5,6 +5,8 @@ Release automation moves pending entries into a dated section when publishing.
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-09-18
+
 ### Fixed
 
 - Stop queued public requests when another process records a rate-limit cooldown.
@@ -49,6 +51,7 @@ Release automation moves pending entries into a dated section when publishing.
   reads, recognize commercial-listing seller IDs, and preserve relative image
   output paths through CLI parsing.
 
-[Unreleased]: https://github.com/johannhipp/kcli/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/johannhipp/kcli/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/johannhipp/kcli/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/johannhipp/kcli/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/johannhipp/kcli/releases/tag/v0.1.0
