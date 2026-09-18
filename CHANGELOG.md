@@ -5,6 +5,8 @@ Release automation moves pending entries into a dated section when publishing.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-09-18
+
 ### Added
 
 - Account-free public website browsing: categories, location resolution, search,
@@ -35,3 +37,6 @@ Release automation moves pending entries into a dated section when publishing.
 - Retain public seller profiles and richer encountered names across inventory
   reads, recognize commercial-listing seller IDs, and preserve relative image
   output paths through CLI parsing.
+
+[Unreleased]: https://github.com/johannhipp/kcli/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/johannhipp/kcli/releases/tag/v0.1.0
