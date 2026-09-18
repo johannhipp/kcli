@@ -46,7 +46,7 @@ func webTestSearchPage() string {
 	return webTestIsland("ImpressionTracker.fixture", map[string]any{"resultAds": []any{map[string]any{"organicAdPreview": ad}, map[string]any{"organicAdPreview": ad}}}) + `<a href="/s-fahrrad/seite:2/k0">2</a>`
 }
 func TestWebSearchPublicMappingAndPagination(t *testing.T) {
-	raw, pages, err := parseWebSearch([]byte(webTestSearchPage()))
+	raw, pages, err := parseWebSearch([]byte(webTestSearchPage()), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,11 +60,11 @@ func TestWebSearchPublicMappingAndPagination(t *testing.T) {
 	if pages[1] != publicWebOrigin+"/s-fahrrad/seite:2/k0" {
 		t.Fatal(pages)
 	}
-	if _, _, err := parseWebSearch([]byte(`<html>changed contract</html>`)); err == nil {
+	if _, _, err := parseWebSearch([]byte(`<html>changed contract</html>`), 0); err == nil {
 		t.Fatal("accepted missing search contract")
 	}
 	empty := webTestIsland("ImpressionTracker.fixture", map[string]any{"resultAds": []any{}})
-	raw, _, err = parseWebSearch([]byte(empty))
+	raw, _, err = parseWebSearch([]byte(empty), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -179,7 +179,7 @@ func TestWebTransportRejectsUntrustedRoutes(t *testing.T) {
 
 func TestWebLegacyInventoryAndExplicitEmpty(t *testing.T) {
 	body := `<ul id="page-searchresults-adtable"><li><article class="aditem" data-adid="12345" data-href="/s-anzeige/fixture/12345-217-3331"><h2>Fixture bicycle</h2><p class="aditem-main--middle--description">Description</p><p class="aditem-main--middle--price-shipping--price">120 € VB</p></article></li></ul>`
-	raw, _, err := parseWebSearch([]byte(body))
+	raw, _, err := parseWebSearch([]byte(body), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -187,7 +187,7 @@ func TestWebLegacyInventoryAndExplicitEmpty(t *testing.T) {
 	if err != nil || len(page.Listings) != 1 || page.Listings[0].Summary.Price != "120" {
 		t.Fatal(page, err)
 	}
-	raw, _, err = parseWebSearch([]byte(`<section id="saved-search-empty-result">Keine Ergebnisse</section>`))
+	raw, _, err = parseWebSearch([]byte(`<section id="saved-search-empty-result">Keine Ergebnisse</section>`), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -295,7 +295,7 @@ func TestWebSearchRequestAndEndOfPagination(t *testing.T) {
 		}
 	}
 	malformed := webTestIsland("ImpressionTracker.fixture", map[string]any{"resultAds": map[string]any{}})
-	if _, _, err := parseWebSearch([]byte(malformed)); err == nil {
+	if _, _, err := parseWebSearch([]byte(malformed), 0); err == nil {
 		t.Fatal("accepted malformed collection")
 	}
 }

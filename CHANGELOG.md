@@ -9,6 +9,8 @@ Release automation moves pending entries into a dated section when publishing.
 
 ### Fixed
 
+- Preserve website search continuation and label within-page result truncation.
+
 - Follow bounded same-host image redirects through the production web transport.
 
 - Stop queued public requests when another process records a rate-limit cooldown.

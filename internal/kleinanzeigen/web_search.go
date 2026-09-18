@@ -41,7 +41,7 @@ func (t *WebTransport) search(ctx context.Context, query map[string][]string) (R
 	target, known := t.pages[cacheKey][page]
 	t.mu.Unlock()
 	if known && target == "" {
-		return Response{StatusCode: 200, Body: []byte(`{"ads":{"ad":[]}}`)}, nil
+		return Response{StatusCode: 200, Body: []byte(`{"ads":{"ad":[],"paging":{"nextPage":null}}}`)}, nil
 	}
 	if !known {
 		// Later pages are reached only through links actually supplied by the site.
@@ -72,7 +72,7 @@ func (t *WebTransport) search(ctx context.Context, query map[string][]string) (R
 		if err := validateWebFilterState(response.Body, query); err != nil {
 			return Response{}, err
 		}
-		normalized, links, err := parseWebSearch(response.Body)
+		normalized, links, err := parseWebSearch(response.Body, 0)
 		if err != nil {
 			return Response{}, err
 		}
@@ -88,7 +88,7 @@ func (t *WebTransport) search(ctx context.Context, query map[string][]string) (R
 			return Response{}, webInvalid("requested page is not linked by the website; use paginate from page 0")
 		}
 		if target == "" {
-			return Response{StatusCode: 200, Body: []byte(`{"ads":{"ad":[]}}`)}, nil
+			return Response{StatusCode: 200, Body: []byte(`{"ads":{"ad":[],"paging":{"nextPage":null}}}`)}, nil
 		}
 	}
 	response, finalURL, err := t.fetch(ctx, target)
@@ -101,7 +101,7 @@ func (t *WebTransport) search(ctx context.Context, query map[string][]string) (R
 	if err := validateWebFilterState(response.Body, query); err != nil {
 		return Response{}, err
 	}
-	normalized, links, err := parseWebSearch(response.Body)
+	normalized, links, err := parseWebSearch(response.Body, page)
 	if err != nil {
 		return Response{}, err
 	}
@@ -237,7 +237,7 @@ func webInvalid(message string) error {
 	return &domain.Error{Code: domain.CodeInvalidInput, Message: message}
 }
 
-func parseWebSearch(body []byte) ([]byte, map[int]string, error) {
+func parseWebSearch(body []byte, pageNumber int) ([]byte, map[int]string, error) {
 	doc, err := parseWebDocument(body)
 	if err != nil {
 		return nil, nil, err
@@ -337,7 +337,12 @@ func parseWebSearch(body []byte) ([]byte, map[int]string, error) {
 		}
 		links[page-1] = target.String()
 	})
-	encoded, err := webJSON(map[string]any{"ads": map[string]any{"ad": rows}})
+	continuation := SearchContinuation{}
+	if _, exists := links[pageNumber+1]; exists {
+		next := pageNumber + 1
+		continuation.Next = &next
+	}
+	encoded, err := webJSON(map[string]any{"ads": map[string]any{"ad": rows, "paging": continuation}})
 	return encoded, links, err
 }
 
@@ -356,7 +361,7 @@ func (t *WebTransport) PublicSellerListings(ctx context.Context, id string) (Sea
 	if response.StatusCode != 200 {
 		return SearchPage{}, webResponseError(response)
 	}
-	raw, _, err := parseWebSearch(response.Body)
+	raw, _, err := parseWebSearch(response.Body, 0)
 	if err != nil {
 		return SearchPage{}, err
 	}

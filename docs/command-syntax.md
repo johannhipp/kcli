@@ -49,7 +49,11 @@ kcli search [QUERY]
 `--input` accepts a complete versioned search specification. It is mutually
 exclusive with search-building flags so an agent cannot accidentally mix two
 sources of truth. `--paginate` requires a bounded `--limit` unless a documented
-safe default applies.
+safe default applies. Search `next` is a zero-based page number advertised by
+returned website links, or null when there is no continuation. If `--limit`
+truncates a page, `next` is null, completeness is partial, and a `page_truncated`
+warning identifies the page to rerun with a larger limit before advancing.
+Thus null plus partial completeness must not be interpreted as exhaustion.
 
 Numeric `--location` values are location IDs. Resolve a postcode with
 `kcli location resolve POSTCODE` first, then pass the returned ID. Text place
