@@ -8,12 +8,12 @@ builds:
   - id: kcli
     main: ./cmd/kcli
     binary: kcli
+    flags: [-trimpath]
     env:
       - CGO_ENABLED=0
     goos:
       - darwin
       - linux
-      - windows
     goarch:
       - amd64
       - arm64
@@ -22,19 +22,15 @@ builds:
       - -X github.com/johannhipp/kcli/internal/buildinfo.Version={{.Version}}
       - -X github.com/johannhipp/kcli/internal/buildinfo.Commit={{.Commit}}
       - -X github.com/johannhipp/kcli/internal/buildinfo.Date={{.Date}}
-      # App distribution and OAuth client configuration are public-client
-      # material; official builds inject them from release secrets so the
-      # shipped binary has working anonymous discovery and auth login. Empty
-      # values keep the relevant command fail-closed ("not configured").
-      - -X github.com/johannhipp/kcli/internal/buildinfo.BasicUser={{ .Env.KLEINANZEIGEN_BASIC_USER }}
-      - -X github.com/johannhipp/kcli/internal/buildinfo.BasicPassword={{ .Env.KLEINANZEIGEN_BASIC_PW }}
-      - -X github.com/johannhipp/kcli/internal/buildinfo.OAuthClientID={{ .Env.KLEINANZEIGEN_OAUTH_CLIENT_ID }}
 archives:
   - formats: [tar.gz]
-    format_overrides:
-      - goos: windows
-        formats: [zip]
+    files:
+      - README.md
+      - CHANGELOG.md
 checksum:
   name_template: checksums.txt
 changelog:
   disable: true
+
+release:
+  replace_existing_artifacts: true

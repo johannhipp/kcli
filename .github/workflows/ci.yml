@@ -4,13 +4,10 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
-
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   check:
@@ -21,4 +18,59 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
-      - run: make check
+      - name: Lint, build, and offline tests
+        run: make check
+      - name: Build supported platforms
+        shell: bash
+        run: |
+          for os in darwin linux; do
+            for arch in amd64 arm64; do
+              CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" go build -trimpath -o "$RUNNER_TEMP/kcli-$os-$arch" ./cmd/kcli
+            done
+          done
+
+  release:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: release-main
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Prepare version and changelog
+        id: version
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          python3 scripts/prepare_release.py
+          python3 scripts/check_docs.py
+      - name: Publish changelog and immutable tag
+        if: steps.version.outputs.publish_commit == 'true'
+        env:
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+        run: git push --atomic origin HEAD:main "refs/tags/$RELEASE_TAG"
+      - name: Check whether this tag is already published
+        id: published
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          published="$(gh release view "$RELEASE_TAG" --json isDraft --jq '.isDraft == false' 2>/dev/null || true)"
+          echo "complete=$published" >> "$GITHUB_OUTPUT"
+      - name: Build and publish macOS and Linux archives
+        if: steps.published.outputs.complete != 'true'
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          version: v2.18.2
+          args: release --clean --release-notes "${{ runner.temp }}/release-notes.md"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

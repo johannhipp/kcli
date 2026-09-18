@@ -9,7 +9,7 @@ covers the anonymous testing context. No login or message transmission occurred.
 
 | Check | Evidence |
 |---|---|
-| Full suite | `make check`: formatting, vet, race/shuffle tests across all packages, staticcheck, govulncheck and documentation passed; no reported vulnerabilities |
+| Full suite | `make check` and `make lint`: formatting, vet, race/shuffle tests across all packages, staticcheck, govulncheck and documentation passed; no reported vulnerabilities |
 | Dependency integrity | `go mod verify` passed |
 | Real CLI/web boundary | `TestPublicWebCLIJourney` exercises real argv, production web transport and reopened state through intercepted HTTP; verifies deadlines, public hosts and no authorization headers |
 | CLI smoke | All 23 exposed commands have working help and schemas; bash/zsh/fish completion, local doctor and structured invalid-input errors passed |

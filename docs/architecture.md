@@ -18,8 +18,9 @@ registered in the command tree. The release does not initialize keyrings or
 inject mobile credentials. Reintroducing authenticated features requires a
 separate scope and acceptance change.
 
-Run `make check` for formatting, vet, tests, staticcheck, vulnerability and docs
-checks; `make cross` for all four targets. Tests use synthetic fixtures/fake
+Run `make check` for formatting, module integrity, build, vet, tests and docs;
+`make lint` adds staticcheck and vulnerability checks; `make cross` builds all
+four targets. Tests use synthetic fixtures/fake
 transports and never contact Kleinanzeigen automatically. Explicit live
 acceptance must be paced, bounded, stop on challenges/429, and keep captures in
 ignored `.tmp/`. See [test results](test-results.md) for the actual evidence.
