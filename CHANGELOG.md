@@ -5,6 +5,12 @@ Release automation moves pending entries into a dated section when publishing.
 
 ## [Unreleased]
 
+## [0.1.9] - 2026-09-18
+
+### Changed
+
+- fix(cli): include state initialization in command deadlines (#21) (74c98fa)
+
 ## [0.1.8] - 2026-09-18
 
 ### Changed
@@ -104,7 +110,8 @@ Release automation moves pending entries into a dated section when publishing.
   reads, recognize commercial-listing seller IDs, and preserve relative image
   output paths through CLI parsing.
 
-[Unreleased]: https://github.com/johannhipp/kcli/compare/v0.1.8...HEAD
+[Unreleased]: https://github.com/johannhipp/kcli/compare/v0.1.9...HEAD
+[0.1.9]: https://github.com/johannhipp/kcli/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/johannhipp/kcli/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/johannhipp/kcli/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/johannhipp/kcli/compare/v0.1.5...v0.1.6
