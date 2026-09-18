@@ -2,8 +2,6 @@ package media
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -51,13 +49,15 @@ func Download(ctx context.Context, transport kleinanzeigen.Transport, request Do
 	if err != nil {
 		return "", err
 	}
-	if err := listingPrepareDirectory(outputDir); err != nil {
+	directory, err := openDownloadDirectory(outputDir)
+	if err != nil {
 		var typed *domain.Error
 		if errors.As(err, &typed) {
 			return "", err
 		}
 		return "", &domain.Error{Code: domain.CodeUnavailable, Message: "prepare image output directory", Cause: err}
 	}
+	defer directory.Close()
 	relation := strings.Trim(listingFilenamePartPattern.ReplaceAllString(request.Relation, "_"), "_")
 	if relation == "" {
 		return "", &domain.Error{Code: domain.CodeUpstreamContract, Message: "image relation cannot form a safe filename"}
@@ -75,7 +75,7 @@ func Download(ctx context.Context, transport kleinanzeigen.Transport, request Do
 	if filepath.Dir(destination) != outputDir {
 		return "", &domain.Error{Code: domain.CodeInvalidInput, Message: "invalid image destination"}
 	}
-	if err := listingWriteAtomic(ctx, destination, body, request.Overwrite); err != nil {
+	if err := directory.writeAtomic(ctx, name, body, request.Overwrite); err != nil {
 		return "", err
 	}
 	return destination, nil
@@ -211,109 +211,6 @@ func listingResolveOutputDir(input, allowed string) (string, error) {
 		return "", &domain.Error{Code: domain.CodeInvalidInput, Message: "--allow-outside-cwd must exactly match --output-dir"}
 	}
 	return absolute, nil
-}
-
-func listingPrepareDirectory(path string) error {
-	if err := listingRejectSymlinkParents(path); err != nil {
-		return &domain.Error{Code: domain.CodeInvalidInput, Message: err.Error(), Cause: err}
-	}
-	if err := os.MkdirAll(path, 0o700); err != nil {
-		return err
-	}
-	if err := listingRejectSymlinkParents(path); err != nil {
-		return &domain.Error{Code: domain.CodeInvalidInput, Message: err.Error(), Cause: err}
-	}
-	return os.Chmod(path, 0o700)
-}
-
-func listingRejectSymlinkParents(path string) error {
-	clean := filepath.Clean(path)
-	volume := filepath.VolumeName(clean)
-	remainder := strings.TrimPrefix(clean, volume)
-	current := volume + string(filepath.Separator)
-	for _, part := range strings.Split(strings.TrimPrefix(remainder, string(filepath.Separator)), string(filepath.Separator)) {
-		if part == "" {
-			continue
-		}
-		current = filepath.Join(current, part)
-		info, err := os.Lstat(current)
-		if os.IsNotExist(err) {
-			continue
-		}
-		if err != nil {
-			return err
-		}
-		if info.Mode()&os.ModeSymlink != 0 {
-			return fmt.Errorf("symlink path component is not allowed: %s", current)
-		}
-		if !info.IsDir() {
-			return fmt.Errorf("output path component is not a directory: %s", current)
-		}
-	}
-	return nil
-}
-
-func listingWriteAtomic(ctx context.Context, destination string, body []byte, overwrite bool) (err error) {
-	if err := ctx.Err(); err != nil {
-		return &domain.Error{Code: domain.CodeInterrupted, Message: "image download interrupted", Cause: err}
-	}
-	if info, statErr := os.Lstat(destination); statErr == nil {
-		if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
-			return &domain.Error{Code: domain.CodeInvalidInput, Message: "image destination is not a regular file"}
-		}
-		if !overwrite {
-			return &domain.Error{Code: domain.CodeInvalidInput, Message: "image destination already exists; use --overwrite to replace it"}
-		}
-	} else if !os.IsNotExist(statErr) {
-		return &domain.Error{Code: domain.CodeUnavailable, Message: "inspect image destination", Cause: statErr}
-	}
-
-	suffix := make([]byte, 8)
-	if _, err := rand.Read(suffix); err != nil {
-		return &domain.Error{Code: domain.CodeUnavailable, Message: "create image temporary name", Cause: err}
-	}
-	temporary := destination + ".tmp-" + hex.EncodeToString(suffix)
-	file, err := os.OpenFile(temporary, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
-	if err != nil {
-		return &domain.Error{Code: domain.CodeUnavailable, Message: "create image temporary file", Cause: err}
-	}
-	complete := false
-	defer func() {
-		if !complete {
-			_ = file.Close()
-			_ = os.Remove(temporary)
-		}
-	}()
-	if _, err := file.Write(body); err != nil {
-		return &domain.Error{Code: domain.CodeUnavailable, Message: "write image temporary file", Cause: err}
-	}
-	if err := ctx.Err(); err != nil {
-		return &domain.Error{Code: domain.CodeInterrupted, Message: "image download interrupted", Cause: err}
-	}
-	if err := file.Sync(); err != nil {
-		return &domain.Error{Code: domain.CodeUnavailable, Message: "sync image temporary file", Cause: err}
-	}
-	if err := file.Close(); err != nil {
-		return &domain.Error{Code: domain.CodeUnavailable, Message: "close image temporary file", Cause: err}
-	}
-	if !overwrite {
-		reservation, err := os.OpenFile(destination, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
-		if err != nil {
-			return &domain.Error{Code: domain.CodeInvalidInput, Message: "image destination already exists; use --overwrite to replace it", Cause: err}
-		}
-		if err := reservation.Close(); err != nil {
-			_ = os.Remove(destination)
-			return &domain.Error{Code: domain.CodeUnavailable, Message: "reserve image destination", Cause: err}
-		}
-		if err := os.Rename(temporary, destination); err != nil {
-			_ = os.Remove(destination)
-			return &domain.Error{Code: domain.CodeUnavailable, Message: "install downloaded image", Cause: err}
-		}
-	} else if err := os.Rename(temporary, destination); err != nil {
-		return &domain.Error{Code: domain.CodeUnavailable, Message: "replace downloaded image", Cause: err}
-	}
-	complete = true
-	return nil
 }
 
 func listingHeader(headers map[string][]string, name string) string {

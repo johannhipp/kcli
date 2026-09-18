@@ -12,7 +12,10 @@ identifiers are compatibility plumbing, not outgoing mobile API requests.
 `cmd/kcli` owns process exit and signals; `internal/cli` owns arguments and
 streams; `internal/app` owns use cases; `internal/kleinanzeigen` owns transport
 and normalization; `internal/state` owns persistence; `internal/media` confines
-downloads; `internal/output` owns envelopes and projection. Schemas derive from
+downloads; `internal/output` owns envelopes and projection. Media directory handles are
+opened component-by-component without following symlinks on macOS/Linux. Writes
+and atomic installation stay relative to that handle across network waits;
+non-overwrite installation never creates an intermediate destination placeholder. Schemas derive from
 the command model rather than a separately maintained command inventory.
 
 Auth/DM internals are retained as tested historical implementation, but are not
