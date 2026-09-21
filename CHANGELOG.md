@@ -5,6 +5,11 @@ Release automation moves pending entries into a dated section when publishing.
 
 ## [Unreleased]
 
+### Added
+
+- Prepare fresh Amp orbs with the pinned Go toolchain, downloaded dependencies,
+  lint tools, and a warmed build cache.
+
 ## [0.1.11] - 2026-09-18
 
 ### Changed
