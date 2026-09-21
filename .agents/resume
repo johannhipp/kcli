@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$repo_root"
+
+env_file="$HOME/.config/kcli-orb/env.sh"
+if [[ -f "$env_file" ]]; then
+	# shellcheck disable=SC1090
+	source "$env_file"
+fi
+
+for command_name in go make python3; do
+	command -v "$command_name" >/dev/null
+done
+
+required_go="$(awk '$1 == "toolchain" { sub(/^go/, "", $2); print $2; exit }' go.mod)"
+if [[ -z "$required_go" ]]; then
+	required_go="$(awk '$1 == "go" { print $2; exit }' go.mod)"
+fi
+
+actual_go="$(GOTOOLCHAIN=auto go version)"
+if [[ "$actual_go" != "go version go${required_go} "* ]]; then
+	printf 'Expected Go %s, got %s\n' "$required_go" "$actual_go" >&2
+	exit 1
+fi

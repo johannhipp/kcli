@@ -51,3 +51,6 @@ tmp/
 # Local executable and agent scratch plans
 /kcli
 /plans/
+
+# Amp orb runtime files
+.amp/portals/*
