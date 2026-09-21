@@ -4,6 +4,12 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
+env_file="$HOME/.config/kcli-orb/env.sh"
+if [[ -f "$env_file" ]]; then
+	# shellcheck disable=SC1090
+	source "$env_file"
+fi
+
 for command_name in go make python3; do
 	command -v "$command_name" >/dev/null
 done
