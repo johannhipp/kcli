@@ -2,6 +2,7 @@ package kleinanzeigen
 
 import (
 	"context"
+	"encoding/json"
 	"net/url"
 	"strings"
 	"time"
@@ -63,4 +64,40 @@ func (t *WebTransport) PublicSeller(ctx context.Context, id string) (domain.Sell
 		seller.Public["poster-type"] = seller.PosterType
 	}
 	return seller, nil
+}
+
+// PublicSellerListings fetches one public inventory page; it does not imply a
+// global seller directory or a complete inventory beyond that bounded page.
+func (t *WebTransport) PublicSellerListings(ctx context.Context, id string) (SearchPage, error) {
+	if !numericID(id) {
+		return SearchPage{}, webInvalid("seller ID must contain decimal digits only")
+	}
+	ctx, cancel := context.WithTimeout(ctx, 25*time.Second)
+	defer cancel()
+	response, _, err := t.fetch(ctx, publicWebOrigin+"/s-bestandsliste.html?"+url.Values{"userId": {id}}.Encode())
+	if err != nil {
+		return SearchPage{}, err
+	}
+	if response.StatusCode != 200 {
+		return SearchPage{}, webResponseError(response)
+	}
+	raw, _, err := parseWebSearch(response.Body, 0)
+	if err != nil {
+		return SearchPage{}, err
+	}
+	page, err := SearchParsePage(raw)
+	doc, _ := parseWebDocument(response.Body)
+	name := ""
+	webWalk(doc, func(n *html.Node) {
+		if webListingClass(n, "userprofile--name") {
+			name = webText(n)
+		}
+	})
+	for i := range page.Listings {
+		page.Listings[i].Summary.Source = "public-web"
+		page.Listings[i].Seller.ID = id
+		page.Listings[i].Seller.Name = name
+		page.Listings[i].Seller.Raw, _ = json.Marshal(map[string]any{"user-id": id, "contact-name": name})
+	}
+	return page, err
 }
