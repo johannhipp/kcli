@@ -130,9 +130,15 @@ func project(value any, fields []string) (any, error) {
 		}
 		node := tree
 		parts := strings.Split(field, ".")
-		for i, part := range parts {
+		for _, part := range parts {
 			if part == "" {
 				return nil, fmt.Errorf("invalid field path %q", field)
+			}
+		}
+		for i, part := range parts {
+			// Selecting a parent already includes every descendant.
+			if node[part] == true {
+				break
 			}
 			if i == len(parts)-1 {
 				node[part] = true
