@@ -1,6 +1,8 @@
 # Architecture and verification
 
 Go produces self-contained CLI binaries for macOS/Linux on amd64/arm64.
+The preferred toolchain is Go 1.26.9; website HTML parsing uses
+`golang.org/x/net` v0.60.0. Both versions are selected in `go.mod`.
 Kong defines commands and runtime schema discovery; SQLite stores metadata,
 encountered sellers and shared request reservations. All seller-write paths prune
 observations older than 30 days and keep at most 10,000 sellers; deleting a seller
