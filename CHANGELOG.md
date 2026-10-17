@@ -10,6 +10,11 @@ Release automation moves pending entries into a dated section when publishing.
 - Preserve all selected parent fields when `--fields` also names descendants,
   regardless of path order or output format.
 
+### Security
+
+- Update the preferred Go toolchain to 1.26.9 and `golang.org/x/net` to v0.60.0
+  to address published standard-library and HTTP/2 advisories.
+
 ## [0.1.12] - 2026-09-21
 
 ### Added
