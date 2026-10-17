@@ -5,6 +5,8 @@ Release automation moves pending entries into a dated section when publishing.
 
 ## [Unreleased]
 
+## [0.1.14] - 2026-10-17
+
 ### Fixed
 
 - Preserve all selected parent fields when `--fields` also names descendants,
@@ -143,7 +145,8 @@ Release automation moves pending entries into a dated section when publishing.
   reads, recognize commercial-listing seller IDs, and preserve relative image
   output paths through CLI parsing.
 
-[Unreleased]: https://github.com/johannhipp/kcli/compare/v0.1.13...HEAD
+[Unreleased]: https://github.com/johannhipp/kcli/compare/v0.1.14...HEAD
+[0.1.14]: https://github.com/johannhipp/kcli/compare/v0.1.13...v0.1.14
 [0.1.13]: https://github.com/johannhipp/kcli/compare/v0.1.12...v0.1.13
 [0.1.12]: https://github.com/johannhipp/kcli/compare/v0.1.11...v0.1.12
 [0.1.11]: https://github.com/johannhipp/kcli/compare/v0.1.10...v0.1.11
