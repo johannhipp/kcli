@@ -5,6 +5,11 @@ Release automation moves pending entries into a dated section when publishing.
 
 ## [Unreleased]
 
+### Fixed
+
+- Preserve all selected parent fields when `--fields` also names descendants,
+  regardless of path order or output format.
+
 ## [0.1.13] - 2026-10-17
 
 ### Security
