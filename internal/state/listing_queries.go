@@ -34,6 +34,10 @@ type SellerIndexInfo struct {
 	NewestObservedAt time.Time
 }
 
+// Fixed-width UTC timestamps preserve nanosecond chronology in SQLite TEXT
+// comparisons. RFC3339Nano trims fractions and does not sort chronologically.
+const sellerObservationLayout = "2006-01-02T15:04:05.000000000Z"
+
 // UpsertPublicSeller records a profile independently of any listing, under the
 // same retention limits as sellers observed on listing pages.
 func (d *DB) UpsertPublicSeller(ctx context.Context, seller SellerSnapshot) error {
@@ -41,7 +45,7 @@ func (d *DB) UpsertPublicSeller(ctx context.Context, seller SellerSnapshot) erro
 		return err
 	}
 	return d.WithTx(ctx, func(tx *sql.Tx, _ *Queries) error {
-		observed := seller.ObservedAt.UTC().Format(time.RFC3339Nano)
+		observed := seller.ObservedAt.UTC().Format(sellerObservationLayout)
 		if _, err := tx.ExecContext(ctx, `INSERT INTO sellers(seller_id,folded_name,display_name,public_json,source,completeness,observed_at) VALUES(?,?,?,?,?,?,?) ON CONFLICT(seller_id) DO UPDATE SET folded_name=excluded.folded_name,display_name=excluded.display_name,public_json=excluded.public_json,source=excluded.source,completeness=excluded.completeness,observed_at=excluded.observed_at`, seller.ID, seller.FoldedName, seller.DisplayName, []byte(seller.PublicJSON), seller.Source, seller.Completeness, observed); err != nil {
 			return err
 		}
@@ -57,11 +61,11 @@ func (d *DB) UpsertSellerListing(ctx context.Context, seller SellerSnapshot, lis
 		return fmt.Errorf("invalid seller listing snapshot")
 	}
 	return d.WithTx(ctx, func(tx *sql.Tx, _ *Queries) error {
-		observed := seller.ObservedAt.UTC().Format(time.RFC3339Nano)
+		observed := seller.ObservedAt.UTC().Format(sellerObservationLayout)
 		if _, err := tx.ExecContext(ctx, `INSERT INTO sellers(seller_id,folded_name,display_name,public_json,source,completeness,observed_at) VALUES(?,?,?,?,?,?,?) ON CONFLICT(seller_id) DO UPDATE SET folded_name=excluded.folded_name,display_name=excluded.display_name,public_json=excluded.public_json,source=excluded.source,completeness=excluded.completeness,observed_at=excluded.observed_at`, seller.ID, seller.FoldedName, seller.DisplayName, []byte(seller.PublicJSON), seller.Source, seller.Completeness, observed); err != nil {
 			return err
 		}
-		if _, err := tx.ExecContext(ctx, `INSERT INTO seller_listings(seller_id,listing_id,title,status,url,observed_at) VALUES(?,?,?,?,?,?) ON CONFLICT(seller_id,listing_id) DO UPDATE SET title=excluded.title,status=excluded.status,url=excluded.url,observed_at=excluded.observed_at`, listing.SellerID, listing.ListingID, listing.Title, listing.Status, listing.URL, listing.ObservedAt.UTC().Format(time.RFC3339Nano)); err != nil {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO seller_listings(seller_id,listing_id,title,status,url,observed_at) VALUES(?,?,?,?,?,?) ON CONFLICT(seller_id,listing_id) DO UPDATE SET title=excluded.title,status=excluded.status,url=excluded.url,observed_at=excluded.observed_at`, listing.SellerID, listing.ListingID, listing.Title, listing.Status, listing.URL, listing.ObservedAt.UTC().Format(sellerObservationLayout)); err != nil {
 			return err
 		}
 		return pruneSellers(ctx, tx, seller.ObservedAt)

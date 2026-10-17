@@ -67,7 +67,7 @@ func (d *DB) SearchUpsertSellers(ctx context.Context, records []SearchSellerReco
 					record.Completeness = previousCompleteness
 				}
 			}
-			observedAt := record.ObservedAt.UTC().Format(time.RFC3339Nano)
+			observedAt := record.ObservedAt.UTC().Format(sellerObservationLayout)
 			if _, err := tx.ExecContext(ctx, `INSERT INTO sellers(seller_id,folded_name,display_name,public_json,source,completeness,observed_at)
 				VALUES(?,?,?,?,?,?,?)
 				ON CONFLICT(seller_id) DO UPDATE SET folded_name=excluded.folded_name,display_name=excluded.display_name,public_json=excluded.public_json,source=excluded.source,completeness=excluded.completeness,observed_at=excluded.observed_at`,
