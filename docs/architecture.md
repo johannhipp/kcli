@@ -6,7 +6,10 @@ The preferred toolchain is Go 1.26.9; website HTML parsing uses
 Kong defines commands and runtime schema discovery; SQLite stores metadata,
 encountered sellers and shared request reservations. All seller-write paths prune
 observations older than 30 days and keep at most 10,000 sellers; deleting a seller
-also deletes its indexed listing links. Public HTML/JSON reads use
+also deletes its indexed listing links. Seller and listing observation timestamps
+use fixed-width UTC nanosecond precision so text ordering, index horizons and
+retention cutoffs agree with chronological time. A migration pads existing UTC
+timestamps without changing their instants. Public HTML/JSON reads use
 bounded HTTP requests and verified website links. The web adapter normalizes
 those responses for the application services; mobile-shaped internal request
 identifiers are compatibility plumbing, not outgoing mobile API requests.

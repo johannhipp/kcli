@@ -14,7 +14,7 @@ const (
 // pruneSellers applies the same retention policy inside every seller-write
 // transaction. Foreign-key cascades remove the corresponding listing links.
 func pruneSellers(ctx context.Context, tx *sql.Tx, observedAt time.Time) error {
-	cutoff := observedAt.UTC().Add(-listingSellerRetention).Format(time.RFC3339Nano)
+	cutoff := observedAt.UTC().Add(-listingSellerRetention).Format(sellerObservationLayout)
 	if _, err := tx.ExecContext(ctx, `DELETE FROM sellers WHERE observed_at < ?`, cutoff); err != nil {
 		return err
 	}

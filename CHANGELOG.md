@@ -5,6 +5,12 @@ Release automation moves pending entries into a dated section when publishing.
 
 ## [Unreleased]
 
+### Fixed
+
+- Order encountered sellers and listing links chronologically within a second,
+  and enforce the precise 30-day retention boundary; migrate cached observations
+  without losing nanosecond precision.
+
 ## [0.1.14] - 2026-10-17
 
 ### Fixed

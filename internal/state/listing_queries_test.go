@@ -2,7 +2,9 @@ package state
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"path/filepath"
 	"testing"
 	"time"
@@ -58,5 +60,56 @@ func TestSellerIndexExpiresOldSnapshots(t *testing.T) {
 	info, err := database.SellerIndexInfo(ctx)
 	if err != nil || info.Size != 1 {
 		t.Fatalf("expired seller retained: info=%#v err=%v", info, err)
+	}
+}
+
+func TestSellerObservationChronology(t *testing.T) {
+	ctx := context.Background()
+	db, err := Open(ctx, filepath.Join(t.TempDir(), "state.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	oldest := time.Date(2026, 9, 3, 12, 0, 0, 0, time.UTC)
+	for i, offset := range []time.Duration{0, 100 * time.Millisecond, 100*time.Millisecond + time.Nanosecond} {
+		id := []string{"1", "2", "3"}[i]
+		observed := oldest.Add(offset)
+		seller := SellerSnapshot{ID: id, FoldedName: "fixture", DisplayName: "Fixture", PublicJSON: json.RawMessage(`{}`), Source: "listing", Completeness: "direct", ObservedAt: observed}
+		listing := SellerListingSnapshot{SellerID: id, ListingID: "42", URL: "https://www.kleinanzeigen.de/s-anzeige/fixture-" + id + "/42-1-1", ObservedAt: observed}
+		switch i {
+		case 0:
+			err = db.UpsertPublicSeller(ctx, seller)
+		case 1:
+			err = db.SearchUpsertSellers(ctx, []SearchSellerRecord{{SellerID: id, ListingID: listing.ListingID, ListingURL: listing.URL, DisplayName: seller.DisplayName, PublicJSON: seller.PublicJSON, Source: seller.Source, Completeness: seller.Completeness, ObservedAt: observed}})
+		case 2:
+			err = db.UpsertSellerListing(ctx, seller, listing)
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	newest := oldest.Add(100*time.Millisecond + time.Nanosecond)
+	for _, match := range []string{"exact", "contains"} {
+		matches, info, err := db.SearchSellers(ctx, "fixture", match, 1)
+		if err != nil || len(matches) != 1 || matches[0].ID != "3" || !info.OldestObservedAt.Equal(oldest) || !info.NewestObservedAt.Equal(newest) {
+			t.Errorf("%s: matches=%v info=%+v err=%v", match, matches, info, err)
+		}
+	}
+	url, err := db.PublicListingURL(ctx, "42")
+	if err != nil || url != "https://www.kleinanzeigen.de/s-anzeige/fixture-3/42-1-1" {
+		t.Errorf("latest listing URL=%q err=%v", url, err)
+	}
+	// The exact 30-day boundary and newer snapshots survive; older ones do not.
+	if err := db.UpsertPublicSeller(ctx, SellerSnapshot{ID: "4", FoldedName: "new", DisplayName: "New", PublicJSON: json.RawMessage(`{}`), Source: "public-web", Completeness: "direct", ObservedAt: oldest.Add(30*24*time.Hour + 100*time.Millisecond)}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.SellerByID(ctx, "1"); !errors.Is(err, sql.ErrNoRows) {
+		t.Errorf("expired whole-second observation retained: %v", err)
+	}
+	if _, err := db.SellerByID(ctx, "2"); err != nil {
+		t.Errorf("boundary observation pruned: %v", err)
+	}
+	if _, err := db.SellerByID(ctx, "3"); err != nil {
+		t.Errorf("newer observation pruned: %v", err)
 	}
 }
