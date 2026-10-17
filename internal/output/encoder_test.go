@@ -30,6 +30,54 @@ func TestProjectionBeforeJSONEncoding(t *testing.T) {
 		t.Fatalf("absent field should project to empty object, got %s", got)
 	}
 }
+
+func TestOverlappingFieldMasksPreserveParent(t *testing.T) {
+	value := map[string]any{"data": []any{map[string]any{"id": "42", "title": "Bike"}}}
+	for _, format := range []Format{FormatJSON, FormatNDJSON, FormatRaw, FormatTable} {
+		for _, fields := range [][]string{{"data", "data.id"}, {"data.id", "data"}, {"data", "data", "data.title"}} {
+			t.Run(string(format)+"/"+strings.Join(fields, ","), func(t *testing.T) {
+				var out bytes.Buffer
+				if err := (Encoder{Format: format, Fields: fields}).Encode(&out, value); err != nil {
+					t.Fatal(err)
+				}
+				if format == FormatTable {
+					if !strings.Contains(out.String(), "42") || !strings.Contains(out.String(), "Bike") {
+						t.Fatalf("overlapping masks lost parent fields: %s", &out)
+					}
+					return
+				}
+				decoder := json.NewDecoder(&out)
+				var got map[string]any
+				if err := decoder.Decode(&got); err != nil {
+					t.Fatal(err)
+				}
+				row := got
+				if format != FormatNDJSON {
+					row = got["data"].([]any)[0].(map[string]any)
+				}
+				if len(row) != 2 || row["id"] != "42" || row["title"] != "Bike" {
+					t.Fatalf("overlapping masks lost parent fields: %v", got)
+				}
+				if format == FormatNDJSON {
+					var summary map[string]any
+					if err := decoder.Decode(&summary); err != nil {
+						t.Fatal(err)
+					}
+					if summary["schema"] != "kcli.summary/v1" || summary["returned"] != float64(1) {
+						t.Fatalf("invalid summary: %v", summary)
+					}
+				}
+			})
+		}
+	}
+	for _, path := range []string{"data.", "data..id"} {
+		var out bytes.Buffer
+		if err := (Encoder{Format: FormatJSON, Fields: []string{"data", path}}).Encode(&out, value); err == nil {
+			t.Fatalf("invalid descendant %q accepted", path)
+		}
+	}
+}
+
 func TestRawRedaction(t *testing.T) {
 	value := map[string]any{"access_token": "secret-token", "nested": map[string]any{"email": "person@example.invalid", "safe": "contact person@example.invalid"}}
 	var out bytes.Buffer

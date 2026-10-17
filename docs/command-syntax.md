@@ -24,7 +24,9 @@ Field masks project result rows; a mask omitting `data` emits only the summary.
 Its `returned` count is the number of emitted rows, while `page` describes the
 underlying search result. Diagnostics always go to stderr. `--fields` accepts
 comma-separated schema paths and is available on every read command. Arbitrary
-projection remains composable through an external `jq` process.
+projection remains composable through an external `jq` process. Selecting a parent
+includes its complete subtree; overlapping paths such as `data,data.id` preserve
+all `data` fields regardless of path order.
 
 All durations use explicit suffixes such as `30s`, `5m`, or `1h`. `--timeout`
 may lower but never raise the documented operation ceiling. Its deadline starts
